@@ -90,7 +90,11 @@ define(function(require, exports, module) {
         }
       });
 
-      this.add(backgroundSurface);
+      this.backgroundModifier = new StateModifier({
+        origin: [0.5, 0.5],
+      });
+
+      this.add(this.backgroundModifier).add(backgroundSurface);
     }
 
     function _createBox() {
