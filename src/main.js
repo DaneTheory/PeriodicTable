@@ -6,24 +6,40 @@ define(function(require, exports, module) {
 	var Modifier      = require('famous/core/Modifier');
 	var Transform     = require('famous/core/Transform');
 
-
-
-
 	var AppView = require('views/AppView');
 	var GridView = require('views/GridView');
 	var FlyView = require('views/FlyView');
 	var QuaternionBox = require('views/QuaternionBox');
 	var BackgroundView = require('views/BackgroundView');
+	var PeriodicTable = require('views/PeriodicTable');
+	var ElementData = require('data/ElementData');
+
+
+
 
 	var mainContext = Engine.createContext();
+	mainContext.setPerspective(1000);
+
 
 
 	var backgroundView = new BackgroundView();
 
 	//var quaternionBox = new QuaternionBox();
 
+	var periodicTable = new PeriodicTable({
+		elementData: ElementData
+	});
 
-	mainContext.setPerspective(1000);
+
+
+
+
 	mainContext.add(backgroundView);
+
+
+
+
+
+	mainContext.add(periodicTable);
 
 });

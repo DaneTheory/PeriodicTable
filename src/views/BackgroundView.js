@@ -11,7 +11,7 @@ define(function(require, exports, module) {
         View.apply(this, arguments);
 
         _createBackground.call(this);
-        _createPeriodicTable.call(this);
+        //_createPeriodicTable.call(this);
     }
 
     BackgroundView.prototype = Object.create(View.prototype);
@@ -31,10 +31,10 @@ define(function(require, exports, module) {
       this.add(backgroundSurface);
     }
 
-    function _createPeriodicTable() {
-      var periodicTable = new PeriodicTable({ elementData: ElementData });
-      this.add(PeriodicTable);
-    }
+    // function _createPeriodicTable() {
+    //   var periodicTable = new PeriodicTable({ elementData: ElementData });
+    //   this.add(PeriodicTable);
+    // }
 
     module.exports = BackgroundView;
 });

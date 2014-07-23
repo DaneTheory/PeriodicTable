@@ -10,36 +10,104 @@ define(function(require, exports, module) {
     var Transitionable = require('famous/transitions/Transitionable');
     var ScrollSync    = require('famous/inputs/ScrollSync');
     var ContainerSurface = require('famous/surfaces/ContainerSurface');
+    var TweenTransition   =require('famous/transitions/TweenTransition');
+    var Timer           = require('famous/utilities/Timer');
+    var MouseSync       = require('famous/inputs/MouseSync');
+    var Accumulator     = require('famous/inputs/Accumulator');
 
 
     function PeriodicTable() {
         View.apply(this, arguments);
 
         var mainEngine = Engine.createContext();
+        mainEngine.setPerspective(1000);
 
+        /****************TABLE VARIABLES*******************/
         var elementSize = 50;
-        var tableWidth = 936;
-        var tableHeight = 520;
+        var tableWidth = elementSize * 18.72;
+        var tableHeight = elementSize * 10.4;
+
+        Transitionable.registerMethod('tween', TweenTransition);
+        var tableYDefault = 0;
+        var yTransitionable = new Transitionable(tableYDefault);
+
+        var tableXDefault = 0;
+        var xTransitionable = new Transitionable(tableXDefault);
+
+
+        /****************ANIMATION VARIABLES*******************/
+        this.runRandomAnimation = true;
+
+
+        /****************ACCUMULATOR VARIABLES****************/
+
+        var update = 0;
+        var x = 0;
+        var y = 0;
+        var position = [x, y];
+
+        var mouseSync = new MouseSync();
+        var accumulator = new Accumulator(position);
+
+        Engine.pipe(mouseSync);
+        mouseSync.pipe(accumulator);
+
+        mouseSync.on("update", function() {
+          update ++;
+          var mousePosition = accumulator.get();
+          console.log(mousePosition[0]);
+          yTransitionable.set(mousePosition[0] / 150);
+          xTransitionable.set(mousePosition[1] / -150);
+
+          //console.log()
+        })
+
+
 
         var quaternion = new Quaternion(1, 0, 0, 0);
         var smallQuaternion = new Quaternion(180, 0, 0, 0);
 
+
         var rotationModifier = new Modifier({
-          origin: [0.5, 0.5]
+          origin: [0.5,0.5]
         });
 
         rotationModifier.transformFrom(function() {
           return quaternion.getTransform();
         });
 
-        mainEngine.add(rotationModifier).add(createTable(elementSize,elementSize,elementSize, tableWidth, tableHeight, this.options.elementData));
+        this.translateModifier = new Modifier({
+          origin: [0.5,0.5],
+          transform: function() {
+            return Transform.multiply(Transform.rotateY(yTransitionable.get()), Transform.rotateX(xTransitionable.get()))
+          }.bind(this)
+        });
+
+
+
+
+        var translateNode = mainEngine.add(rotationModifier);
+        translateNode.add(this.translateModifier).add(createTable(elementSize,elementSize,elementSize, tableWidth, tableHeight, this.options.elementData));
+
+        Timer.setTimeout(function() {
+          for (var i = 0; i < 500; i++) {
+            if (this.runRandomAnimation) {
+            elementDepthAnimation();
+            }
+          }
+        }.bind(this), 500);
+
+
 
         Engine.on('prerender', function() {
           quaternion = quaternion.multiply(smallQuaternion);
         });
 
 
+        _createViewButton.call(this);
+
         this.add(mainEngine);
+
 
     }
 
@@ -49,6 +117,19 @@ define(function(require, exports, module) {
     PeriodicTable.DEFAULT_OPTIONS = {
       elementData: {}
     };
+    PeriodicTable.prototype.viewFrontButton = function() {
+
+      console.log(this.yTransitionable.get());
+
+      var transition = {
+        method: 'tween',
+        curve: 'easeInOut',
+        duration: '1500'
+      };
+
+      var yRotation = this.yTransitionable.get();
+      this.yTransitionable.set(!yRotation, transition);
+    };
 
 
 
@@ -56,6 +137,9 @@ define(function(require, exports, module) {
       var table = new RenderNode();
 
       var elementNumber = 0;
+      this.translateModifiers = [];
+      this.planeModifiers = [];
+      this.backPlaneModifiers = [];
 
 
         function createElement(params){
@@ -71,25 +155,43 @@ define(function(require, exports, module) {
             transform: params.transform
           });
 
-          table.add(modifier).add(surface);
+
+
+
+          var backSurface = new Surface({
+            size:params.size,
+            classes: params.classes,
+            properties: params.properties
+          });
+
+          var backModifier = new Modifier({
+            transform: params.transformBack
+          })
+
+
+          var planeModifier = new Modifier();
+          var backPlaneModifier = new Modifier();
+
+          var node = table.add(modifier);
+          node.add(planeModifier).add(surface);
+
+          var nodeBack = table.add(backModifier);
+          nodeBack.add(backPlaneModifier).add(backSurface);
+
+
+
           elementNumber++;
-          //console.log(elementNumber);
+
+
+
+
+          this.translateModifiers.push(
+            {modifier: modifier, translate: params.transform});
+          this.planeModifiers.push(planeModifier);
+          this.backPlaneModifiers.push(backPlaneModifier);
         };
 
-      //H ...RED
-      // createElement({
-      //   size: [width, height],
-      //   content: 'H',
-      //   properties: {
-      //     lineHeight: height + 'px',
-      //     textAlign: 'center',
-      //     backgroundColor: '#ef7474',
-      //     fontSize: '20px',
-      //     overflow: 'hidden',
-      //     color: 'white'
-      //   },
-      //   transform: Transform.translate(- tableWidth / 2,- tableHeight / 2, 0)
-      // });
+
 
       var numberRows = 10;
       var numberColumbs = 18;
@@ -144,104 +246,80 @@ define(function(require, exports, module) {
             properties: {
               lineHeight: height + 'px',
               textAlign: 'center',
-              backgroundColor: '#ef7474',
+              backgroundColor: 'rgba(242, 118, 118, 0.54)',
               fontSize: '20px',
               overflow: 'hidden',
               color: 'white'
             },
-            transform: Transform.translate((- tableWidth / 2) + (distance * rowNumber), (- tableHeight / 2) + (distance * columnNumber), 0)
+            transform: Transform.translate((- tableWidth / 2) + (distance * rowNumber), (- tableHeight / 2) + (distance * columnNumber), 0),
+            transformBack: Transform.multiply(Transform.translate((- tableWidth / 2) + (distance * rowNumber), (- tableHeight / 2) + (distance * columnNumber), 0), Transform.multiply(Transform.rotateZ(Math.PI), Transform.rotateX(Math.PI)))
           });
         }
 
-
-
-
-
-
-
       }
 
-
-      // //BACK ...GREEN
-      // createSide({
-      //   size: [width, height],
-      //   content: 'BACK',
-      //   properties: {
-      //     lineHeight: height + 'px',
-      //     textAlign: 'center',
-      //     backgroundColor: '#64f55e',
-      //     fontSize: '18px',
-      //     overflow: 'hidden',
-      //     color: 'white'
-      //   },
-      //   transform: Transform.multiply(Transform.translate(0,0, - depth / 2), Transform.multiply(Transform.rotateZ(Math.PI), Transform.rotateX(Math.PI)))
-      // });
-      //
-      // //TOP....YELLOW
-      // createSide({
-      //   size: [width, depth],
-      //   content: 'TOP',
-      //   properties: {
-      //     lineHeight: depth + 'px',
-      //     textAlign: 'center',
-      //     backgroundColor: '#fff367',
-      //     fontSize: '18px',
-      //     overflow: 'hidden',
-      //     color: 'white'
-      //   },
-      //   transform: Transform.multiply(Transform.translate(0, -height / 2, 0), Transform.rotateX(Math.PI/2))
-      // });
-      //
-      // //BOTTOM ... PURPLE
-      // createSide({
-      //   size: [width, depth],
-      //   content: 'BOTTOM',
-      //   properties: {
-      //     lineHeight: depth + 'px',
-      //     textAlign: 'center',
-      //     backgroundColor: '#b587f6',
-      //     fontSize: '18px',
-      //     overflow: 'hidden',
-      //     color: 'white'
-      //   },
-      //   transform: Transform.multiply(Transform.translate(0, height / 2, 0), Transform.multiply(Transform.rotateX(-Math.PI/2), Transform.rotateZ(Math.PI)))
-      // });
-      //
-      // //LEFT ... ORANGE
-      // createSide({
-      //   size: [width, height],
-      //   content: 'LEFT',
-      //   properties: {
-      //     lineHeight: height + 'px',
-      //     textAlign: 'center',
-      //     backgroundColor: '#ffaa4f',
-      //     fontSize: '18px',
-      //     overflow: 'hidden',
-      //     color: 'white'
-      //   },
-      //   transform: Transform.multiply(Transform.translate(-width / 2, 0,0), Transform.rotateY(-Math.PI/2))
-      // });
-      //
-      // //RIGHT ...
-      // createSide({
-      //   size: [width, height],
-      //   content: 'RIGHT',
-      //   properties: {
-      //     lineHeight: height + 'px',
-      //     textAlign: 'center',
-      //     backgroundColor: '#2dd5ff',
-      //     fontSize: '18px',
-      //     overflow: 'hidden',
-      //     color: 'white'
-      //   },
-      //   transform: Transform.multiply(Transform.translate(width / 2, 0,0), Transform.rotateY(Math.PI/2))
-      // });
 
       return table;
     }
 
 
 
+    function elementDepthAnimation() {
+
+      var elementRandom = Math.floor((Math.random()) * 118);
+      var zDepth = Math.floor((Math.random() * -600) + 600);
+      var xRandom = Math.floor((Math.random() * -400) + 300);
+
+      this.planeModifiers[elementRandom].setTransform(
+        Transform.translate(0,0,zDepth),
+        {
+        duration: 1500,
+        curve: 'easeOut'
+      });
+
+      this.planeModifiers[elementRandom].setTransform(
+        Transform.translate(xRandom,0,zDepth),
+        {
+        duration: 1500,
+        curve: 'easeOut'
+      });
+
+      this.backPlaneModifiers[elementRandom].setTransform(
+        Transform.translate(0,0,-zDepth),
+        {
+        duration: 1500,
+        curve: 'easeOut'
+      });
+
+      this.backPlaneModifiers[elementRandom].setTransform(
+        Transform.translate(xRandom,0,-zDepth),
+        {
+        duration: 1500,
+        curve: 'easeOut'
+      });
+    }
+
+    function _createViewButton() {
+
+      this.frontButton = new Surface({
+        size: [true, true],
+        content: 'Front',
+        properties: {
+          color: 'white',
+          fontSize: '20px',
+          padding: '10px',
+          fontFamily: 'HelveticaNeue-Light',
+          fontWeight: '100'
+        }
+      });
+
+      this.add(this.frontButton);
+
+      this.frontButton.on('click', function() {
+        this.viewFrontButton();
+      }.bind(this));
+
+    }
 
 
 
