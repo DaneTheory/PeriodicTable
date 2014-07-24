@@ -24,6 +24,7 @@ define(function(require, exports, module) {
 
         /****************TABLE VARIABLES*******************/
         var elementSize = 50;
+        this.elementSize = 50;
         var tableWidth = elementSize * 18.72;
         var tableHeight = elementSize * 10.4;
 
@@ -36,7 +37,10 @@ define(function(require, exports, module) {
 
 
         /****************ANIMATION VARIABLES*******************/
-        this.runRandomAnimation = true;
+        this.runRandomAnimation = false;
+        this.animationTransitionable = new Transitionable(false);
+        this.constructed = true;
+        this.currentElement = '';
 
 
         /****************ACCUMULATOR VARIABLES****************/
@@ -55,7 +59,7 @@ define(function(require, exports, module) {
         mouseSync.on("update", function() {
           update ++;
           var mousePosition = accumulator.get();
-          console.log(mousePosition[0]);
+          //console.log(mousePosition[0]);
           yTransitionable.set(mousePosition[0] / 150);
           xTransitionable.set(mousePosition[1] / -150);
 
@@ -89,13 +93,12 @@ define(function(require, exports, module) {
         var translateNode = mainEngine.add(rotationModifier);
         translateNode.add(this.translateModifier).add(createTable(elementSize,elementSize,elementSize, tableWidth, tableHeight, this.options.elementData));
 
+        if (this.runRandomAnimation) {
         Timer.setTimeout(function() {
-          for (var i = 0; i < 500; i++) {
-            if (this.runRandomAnimation) {
-            elementDepthAnimation();
-            }
-          }
+          startStopDepthAnimation(this.runRandomAnimation);
+          this.constructed = false;
         }.bind(this), 500);
+      }
 
 
 
@@ -117,26 +120,31 @@ define(function(require, exports, module) {
     PeriodicTable.DEFAULT_OPTIONS = {
       elementData: {}
     };
-    PeriodicTable.prototype.viewFrontButton = function() {
+    PeriodicTable.prototype.reconstructTable = function() {
 
-      console.log(this.yTransitionable.get());
+      elementDepthAnimation(false);
+      for (var i = 0; i < 120; i ++) {
+        resetElementDepth(i);
 
-      var transition = {
-        method: 'tween',
-        curve: 'easeInOut',
-        duration: '1500'
-      };
+      }
 
-      var yRotation = this.yTransitionable.get();
-      this.yTransitionable.set(!yRotation, transition);
+
     };
+    PeriodicTable.prototype.constructCube = function() {
+      _createCube(this.elementSize);
+    }
 
+    PeriodicTable.prototype.scatterTable = function() {
+      startStopDepthAnimation(this.runRandomAnimation);
+
+    }
 
 
     function createTable(width, height, depth, tableWidth, tableHeight, elementData) {
       var table = new RenderNode();
 
       var elementNumber = 0;
+      this.elementSurfaces = [];
       this.translateModifiers = [];
       this.planeModifiers = [];
       this.backPlaneModifiers = [];
@@ -155,9 +163,6 @@ define(function(require, exports, module) {
             transform: params.transform
           });
 
-
-
-
           var backSurface = new Surface({
             size:params.size,
             classes: params.classes,
@@ -166,7 +171,7 @@ define(function(require, exports, module) {
 
           var backModifier = new Modifier({
             transform: params.transformBack
-          })
+          });
 
 
           var planeModifier = new Modifier();
@@ -183,8 +188,27 @@ define(function(require, exports, module) {
           elementNumber++;
 
 
+          surface.on('click', function() {
+            var name = surface.getContent();
 
 
+            if (this.currentElement != null && this.currentElement.name != name) {
+              elementReturn();
+            }
+
+
+            elementClicked({name: name, surface: surface, modifier: modifier, backSurface: backSurface, backModifier: backModifier, planeModifier: planeModifier, params: params.transform, backParams: params.transformBack});
+
+
+
+
+
+            //console.log(this.currentElement);
+
+          }.bind(this));
+
+
+          this.elementSurfaces.push(surface);
           this.translateModifiers.push(
             {modifier: modifier, translate: params.transform});
           this.planeModifiers.push(planeModifier);
@@ -195,12 +219,9 @@ define(function(require, exports, module) {
 
       var numberRows = 10;
       var numberColumbs = 18;
-
       var columnNumber = -1;
       var rowNumber = -1;
-
       var distance = width + 2;
-
       var notElements = [7,8,9,
                         10,17,18,19,
                         20,21,22,27,28,29,
@@ -262,18 +283,28 @@ define(function(require, exports, module) {
       return table;
     }
 
+    function startStopDepthAnimation(run) {
 
+      for (var i = 0; i < 400; i++) {
+        elementDepthAnimation(true);
+      }
+    }
 
-    function elementDepthAnimation() {
+    function elementDepthAnimation(run) {
+
+      var run = run;
 
       var elementRandom = Math.floor((Math.random()) * 118);
-      var zDepth = Math.floor((Math.random() * -600) + 600);
+      var zDepth = Math.floor((Math.random() * -700) + 500);
       var xRandom = Math.floor((Math.random() * -400) + 300);
+      var depthDuration = Math.floor((Math.random() * 1500) + 1000);
+
+      if (run) {
 
       this.planeModifiers[elementRandom].setTransform(
         Transform.translate(0,0,zDepth),
         {
-        duration: 1500,
+        duration: depthDuration,
         curve: 'easeOut'
       });
 
@@ -287,7 +318,7 @@ define(function(require, exports, module) {
       this.backPlaneModifiers[elementRandom].setTransform(
         Transform.translate(0,0,-zDepth),
         {
-        duration: 1500,
+        duration: depthDuration,
         curve: 'easeOut'
       });
 
@@ -299,11 +330,71 @@ define(function(require, exports, module) {
       });
     }
 
+    }
+
+    function resetElementDepth(elementNumber) {
+      var elementRandom = elementNumber;
+
+      this.planeModifiers[elementRandom].setTransform(
+        Transform.translate(0,0,0),
+        {
+        duration: 1500,
+        curve: 'easeOut'
+      });
+
+      this.planeModifiers[elementRandom].setTransform(
+        Transform.translate(0,0,0),
+        {
+        duration: 1500,
+        curve: 'easeOut'
+      });
+
+      this.backPlaneModifiers[elementRandom].setTransform(
+        Transform.translate(0,0,0),
+        {
+        duration: 1500,
+        curve: 'easeOut'
+      });
+
+      this.backPlaneModifiers[elementRandom].setTransform(
+        Transform.translate(0,0,0),
+        {
+        duration: 1500,
+        curve: 'easeOut'
+      });
+
+      this.translateModifiers[elementRandom].modifier.setTransform(this.translateModifiers[elementRandom].translate,
+        {
+        duration: 1500,
+        curve: 'easeOut'
+      });
+
+      var opaqueTransitionable = new Transitionable(0);
+
+      this.translateModifiers[elementRandom].modifier.opacityFrom(function() {
+        return opaqueTransitionable.get();
+      });
+
+      this.backPlaneModifiers[elementRandom].opacityFrom(function() {
+        return opaqueTransitionable.get();
+      });
+
+      opaqueTransitionable.set(1, {
+        method: 'tween',
+        curve: 'easeOut',
+        duration: 1000
+      });
+
+
+      this.constructed = true;
+
+    }
+
     function _createViewButton() {
 
-      this.frontButton = new Surface({
+      this.reconstructButton = new Surface({
         size: [true, true],
-        content: 'Front',
+        content: 'Reconstruct',
         properties: {
           color: 'white',
           fontSize: '20px',
@@ -313,11 +404,401 @@ define(function(require, exports, module) {
         }
       });
 
-      this.add(this.frontButton);
+      this.add(this.reconstructButton);
 
-      this.frontButton.on('click', function() {
-        this.viewFrontButton();
+      this.reconstructButton.on('click', function() {
+        this.reconstructTable();
       }.bind(this));
+
+      this.createCubeButton = new Surface({
+        size: [true, true],
+        content: 'Create Cube',
+        properties: {
+          color: 'white',
+          fontSize: '20px',
+          padding: '10px',
+          marginTop: '50px',
+          fontFamily: 'HelveticaNeue-Light',
+          fontWeight: '100'
+        }
+      });
+
+      this.add(this.createCubeButton);
+
+      this.createCubeButton.on('click', function() {
+        this.constructCube();
+        //_createCube(this.elementSize);
+      }.bind(this));
+
+      this.randomDepthAnimationButton = new Surface({
+        size: [true, true],
+        content: 'Scatter',
+        properties: {
+          color: 'white',
+          fontSize: '20px',
+          padding: '10px',
+          marginTop: '100px',
+          fontFamily: 'HelveticaNeue-Light',
+          fontWeight: '100'
+        }
+      });
+
+      this.add(this.randomDepthAnimationButton);
+
+      this.randomDepthAnimationButton.on('click', function() {
+        this.scatterTable();
+      }.bind(this));
+
+
+    }
+
+    function elementClicked(name) {
+      //console.log(name);
+
+      var elementName = name;
+      this.currentElement = name;
+
+
+      elementName.modifier.setTransform(Transform.multiply(Transform.translate(0,0,800), Transform.multiply(Transform.rotateZ(-Math.PI), Transform.rotateX(-Math.PI))), {
+        duration: 1500,
+        curve: 'easeOut'
+      });
+      elementName.backModifier.setTransform(Transform.multiply(Transform.translate(0,0,800), Transform.multiply(Transform.rotateZ(0), Transform.rotateX(0))), {
+        duration: 1500,
+        curve: 'easeOut'
+      });
+
+    }
+
+    function elementReturn() {
+      console.log(this.currentElement);
+
+      this.currentElement.modifier.setTransform(
+        this.currentElement.params,
+        {
+        duration: 1500,
+        curve: 'easeOut'
+      });
+
+      this.currentElement.backModifier.setTransform(this.currentElement.backParams, {
+        duration: 1500,
+        curve: 'easeOut'
+      });
+
+    }
+
+//////////////////////////////////////CUBE CREATION///////////////////////////////////////////
+    function _createCube(elementDimentions) {
+
+      var cubeSize = 206;
+      var cubeDimensions = 4;
+      var elementSelectionLocation = 0;
+      var elementsPerSide = 16;
+      var elementSize = elementDimentions;
+      var columnNumber = -1;
+      var rowNumber = -1;
+      var distance = elementSize + 2;
+      var allElements = [];
+      var opacityTransitionable = new Transitionable(1);
+      for (var i = 0; i < 120; i++){
+        allElements.push(i);
+      }
+      allElements.sort(function() {
+        return Math.random() - 0.5;
+      });
+
+
+
+      //SET ELEMENTS OPACITY
+      var opaqueTransitionable = new Transitionable(0);
+      var usedElements = [];
+      for (var i = elementSelectionLocation; i < 96; i++) {
+        usedElements.push(allElements[i]);
+      }
+
+      for (var i = 0; i < usedElements.length; i++) {
+        var usedElementNumber = usedElements[i];
+        this.translateModifiers[i].modifier.opacityFrom(function() {
+          return opaqueTransitionable.get();
+        });
+
+        opaqueTransitionable.set(1, {
+          method: 'tween',
+          curve: 'easeOut',
+          duration: 1000
+        });
+      }
+
+
+      //FRONT
+      var frontElements = []
+      for (elementSelectionLocation; elementSelectionLocation < 1 * elementsPerSide; elementSelectionLocation++){
+        frontElements.push(allElements[elementSelectionLocation]);
+      }
+
+
+      console.log(frontElements);
+
+
+
+      for (var i = 0; i < frontElements.length; i++){
+        var elementNumber = frontElements[i];
+
+        columnNumber++;
+
+        if (i % cubeDimensions == 0) {
+          columnNumber = -1;
+          columnNumber++;
+          rowNumber++;
+        }
+
+
+
+        this.translateModifiers[elementNumber].modifier.setTransform(
+          Transform.translate(((-cubeSize / 2) + (elementSize / 2) + (distance * columnNumber)),((-cubeSize / 2) + (elementSize / 2) + (distance * rowNumber)),cubeSize/2),
+          {
+          duration: 1500,
+          curve: 'easeOut'
+        });
+
+        // this.backPlaneModifiers[elementNumber].setTransform(
+        //   Transform.multiply(Transform.translate(((-cubeSize / 2) + (elementSize / 2) + (distance * columnNumber)),((-cubeSize / 2) + (elementSize / 2) + (distance * rowNumber)),-cubeSize/2), Transform.multiply(Transform.rotateZ(0), Transform.rotateX(0))),
+        //   {
+        //     duration: 1500,
+        //     curve: 'easeOut'
+        //   });
+
+        //
+        //
+        // this.backPlaneModifiers[elementNumber].setTransform(
+        //   Transform.multiply(Transform.translate(0,0,140), Transform.multiply(Transform.rotateZ(0), Transform.rotateX(0))),
+        //   {
+        //   duration: 1500,
+        //   curve: 'easeOut'
+        // });
+
+      }
+
+      //BACK
+      var backColumnNumber = -1;
+      var backRowNumber = -1;
+
+      var backElements = []
+      for (elementSelectionLocation; elementSelectionLocation < 2 * elementsPerSide; elementSelectionLocation++){
+        backElements.push(allElements[elementSelectionLocation]);
+      }
+
+
+      console.log(backElements.length);
+
+
+      for (var i = 0; i < backElements.length; i++){
+        var backElementNumber = backElements[i];
+
+        backColumnNumber++;
+
+        if (i % cubeDimensions == 0) {
+          backColumnNumber = -1;
+          backColumnNumber++;
+          backRowNumber++;
+        }
+
+
+
+        this.translateModifiers[backElementNumber].modifier.setTransform(
+          Transform.multiply(Transform.translate(((-cubeSize / 2) + (elementSize / 2) + (distance * backColumnNumber)),((-cubeSize / 2) + (elementSize / 2) + (distance * backRowNumber)),-cubeSize/2), Transform.multiply(Transform.rotateZ(Math.PI), Transform.rotateX(Math.PI))),
+          {
+          duration: 1500,
+          curve: 'easeOut'
+        });
+
+      }
+
+      //LEFT
+      var leftColumnNumber = -1;
+      var leftRowNumber = -1;
+
+      var leftElements = []
+      for (elementSelectionLocation; elementSelectionLocation < 3 * elementsPerSide; elementSelectionLocation++){
+        leftElements.push(allElements[elementSelectionLocation]);
+      }
+      console.log(leftElements.length);
+
+
+      for (var i = 0; i < leftElements.length; i++){
+        var leftElementNumber = leftElements[i];
+
+        leftColumnNumber++;
+
+        if (i % cubeDimensions == 0) {
+          leftColumnNumber = -1;
+          leftColumnNumber++;
+          leftRowNumber++;
+        }
+
+        var xLocation = ((-cubeSize / 2) + (elementSize / 2) + (distance * leftColumnNumber));
+        var yLocation = ((-cubeSize / 2) + (elementSize / 2) + (distance * leftRowNumber));
+
+        this.translateModifiers[leftElementNumber].modifier.setTransform(
+          Transform.multiply(Transform.translate(cubeSize/2,yLocation,xLocation), Transform.rotateY(Math.PI/2)),
+          {
+          duration: 1500,
+          curve: 'easeOut'
+        });
+
+      }
+
+      //RIGHT
+      var rightColumnNumber = -1;
+      var rightRowNumber = -1;
+
+      var rightElements = []
+      for (elementSelectionLocation; elementSelectionLocation < 4 * elementsPerSide; elementSelectionLocation++){
+        rightElements.push(allElements[elementSelectionLocation]);
+      }
+      console.log(rightElements.length);
+
+
+      for (var i = 0; i < rightElements.length; i++){
+        var rightElementNumber = rightElements[i];
+
+        rightColumnNumber++;
+
+        if (i % cubeDimensions == 0) {
+          rightColumnNumber = -1;
+          rightColumnNumber++;
+          rightRowNumber++;
+        }
+
+        var xLocation = ((-cubeSize / 2) + (elementSize / 2) + (distance * rightColumnNumber));
+        var yLocation = ((-cubeSize / 2) + (elementSize / 2) + (distance * rightRowNumber));
+
+        this.translateModifiers[rightElementNumber].modifier.setTransform(
+          Transform.multiply(Transform.translate(-cubeSize/2,yLocation,xLocation), Transform.rotateY(-Math.PI/2)),
+          {
+          duration: 1500,
+          curve: 'easeOut'
+        });
+
+      }
+
+
+      //TOP
+      var topColumnNumber = -1;
+      var topRowNumber = -1;
+
+      var topElements = []
+      for (elementSelectionLocation; elementSelectionLocation < 5 * elementsPerSide; elementSelectionLocation++){
+        topElements.push(allElements[elementSelectionLocation]);
+      }
+
+
+      for (var i = 0; i < topElements.length; i++){
+        var topElementNumber = topElements[i];
+
+        topColumnNumber++;
+
+        if (i % cubeDimensions == 0) {
+          topColumnNumber = -1;
+          topColumnNumber++;
+          topRowNumber++;
+        }
+
+        var xLocation = ((-cubeSize / 2) + (elementSize / 2) + (distance * topColumnNumber));
+        var yLocation = ((-cubeSize / 2) + (elementSize / 2) + (distance * topRowNumber));
+
+        this.translateModifiers[topElementNumber].modifier.setTransform(
+          Transform.multiply(Transform.translate(xLocation, -cubeSize/2, yLocation), Transform.rotateX(Math.PI/2)),
+          {
+          duration: 1500,
+          curve: 'easeOut'
+        });
+
+      }
+
+
+      //BOTTOM
+      var bottomColumnNumber = -1;
+      var bottomRowNumber = -1;
+
+      var bottomElements = []
+      for (elementSelectionLocation; elementSelectionLocation < 6 * elementsPerSide; elementSelectionLocation++){
+        bottomElements.push(allElements[elementSelectionLocation]);
+      }
+
+
+      for (var i = 0; i < bottomElements.length; i++){
+        var bottomElementNumber = bottomElements[i];
+
+        bottomColumnNumber++;
+
+        if (i % cubeDimensions == 0) {
+          bottomColumnNumber = -1;
+          bottomColumnNumber++;
+          bottomRowNumber++;
+        }
+
+        var xLocation = ((-cubeSize / 2) + (elementSize / 2) + (distance * bottomColumnNumber));
+        var yLocation = ((-cubeSize / 2) + (elementSize / 2) + (distance * bottomRowNumber));
+
+        this.translateModifiers[bottomElementNumber].modifier.setTransform(
+          Transform.multiply(Transform.translate(xLocation, cubeSize/2, yLocation), Transform.rotateX(-Math.PI/2)),
+          {
+          duration: 1500,
+          curve: 'easeOut'
+        });
+
+      }
+
+
+      //REMOVE EXTRA ELEMENTS AND ADD TRANSPARENCY
+      var extraElements = [];
+      for (var i = elementSelectionLocation; i < 120; i++) {
+        extraElements.push(allElements[i]);
+      }
+
+      for (var i = 0; i < extraElements.length; i++) {
+        var extraElementNumber = extraElements[i];
+
+        var xRandom = Math.floor((Math.random() * 2000) - 1600);
+        var yRandom = Math.floor((Math.random() * 2000) - 1600);
+
+
+        this.translateModifiers[extraElementNumber].modifier.setTransform(
+          Transform.translate(xRandom,yRandom,0), {
+          duration: 2000,
+          curve: 'easeOut'
+        });
+
+        this.translateModifiers[extraElementNumber].modifier.opacityFrom(function() {
+          return opacityTransitionable.get();
+        });
+
+        opacityTransitionable.set(0, {
+          method: 'tween',
+          curve: 'easeOut',
+          duration: 2000
+        });
+
+      }
+
+      var backOpacity = new Transitionable(1);
+      for (var i = 0; i < 120; i++){
+
+        this.backPlaneModifiers[i].opacityFrom(function() {
+          return backOpacity.get();
+        });
+
+        backOpacity.set(0, {
+          method: 'tween',
+          curve: 'easeOut',
+          duration: 1000
+        });
+      }
+
+
+
+
 
     }
 
