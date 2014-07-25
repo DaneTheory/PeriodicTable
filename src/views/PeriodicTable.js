@@ -23,6 +23,8 @@ define(function(require, exports, module) {
         mainEngine.setPerspective(1000);
 
         /****************TABLE VARIABLES*******************/
+        var windowHeight = window.innerHeight;
+        var windowWidth = window.innerWidth;
         var elementSize = 50;
         this.elementSize = 50;
         var tableWidth = elementSize * 18.72;
@@ -77,7 +79,7 @@ define(function(require, exports, module) {
 
 
         var quaternion = new Quaternion(1, 0, 0, 0);
-        var smallQuaternion = new Quaternion(180, 0, 0.5, 0);
+        var smallQuaternion = new Quaternion(180, 0, 0, 0);
 
 
         var rotationModifier = new Modifier({
@@ -88,8 +90,7 @@ define(function(require, exports, module) {
           return quaternion.getTransform();
         });
 
-        var windowHeight = window.innerHeight;
-        var windowWidth = window.innerWidth;
+
 
         this.translateModifier = new Modifier({
           origin: [0,0],
@@ -131,9 +132,7 @@ define(function(require, exports, module) {
     PeriodicTable.prototype = Object.create(View.prototype);
     PeriodicTable.prototype.constructor = PeriodicTable;
 
-    PeriodicTable.DEFAULT_OPTIONS = {
-      elementData: {}
-    };
+
     PeriodicTable.prototype.reconstructTable = function() {
 
       elementDepthAnimation(false);
@@ -153,7 +152,20 @@ define(function(require, exports, module) {
 
     }
 
-
+    PeriodicTable.DEFAULT_OPTIONS = {
+      elementData: {},
+      buttonFontSize: '17px',
+      none: 'rgba(255, 255, 255, 0.54)',
+      hydrogen: 'rgba(102, 102, 102, 0.54)',
+      alkaliMetals: 'rgba(245, 176, 120, 0.54)',
+      alkaliEarthMetals: 'rgba(241, 245, 120, 0.54)',
+      transitionMetals: 'rgba(242, 118, 118, 0.54)',
+      poorMetals: 'rgba(120, 245, 220, 0.54)',
+      otherNonMetals: 'rgba(132, 245, 120, 0.54)',
+      nobleGases: 'rgba(120, 159, 245, 0.54)',
+      lanthanoids: 'rgba(245, 120, 220, 0.54)',
+      actinoids: 'rgba(195, 120, 245, 0.54)'
+    };
 
     function createTable(width, height, depth, tableWidth, tableHeight, elementData) {
       var table = new RenderNode();
@@ -257,8 +269,31 @@ define(function(require, exports, module) {
                         150,157,
                         160,167,
                         177];
+      var none = 'rgba(255, 255, 255, 0.54)';
+      var hydrogen = 'rgba(102, 102, 102, 0.54)';
+      var alkaliMetals = 'rgba(245, 176, 120, 0.54)';
+      var alkaliEarthMetals = 'rgba(241, 245, 120, 0.54)';
+      var transitionMetals = 'rgba(242, 118, 118, 0.54)';
+      var poorMetals = 'rgba(120, 245, 220, 0.54)';
+      var otherNonMetals = 'rgba(132, 245, 120, 0.54)';
+      var nobleGases = 'rgba(120, 159, 245, 0.54)';
+      var lanthanoids = 'rgba(245, 120, 220, 0.54)';
+      var actinoids = 'rgba(195, 120, 245, 0.54)';
 
-      var elementAbreviations = ["H","Li","Na","K","","",""];
+      var elementColors = {
+      'none': 'rgba(255, 255, 255, 0.54)',
+      'hydrogen': 'rgba(102, 102, 102, 0.54)',
+      'alkaliMetal': 'rgba(245, 176, 120, 0.54)',
+      'alkaliEarthMetal': 'rgba(241, 245, 120, 0.54)',
+      'transitionMetal': 'rgba(242, 118, 118, 0.54)',
+      'poorMetals': 'rgba(120, 245, 220, 0.54)',
+      'otherNonMetals': 'rgba(132, 245, 120, 0.54)',
+      'nobleGases': 'rgba(120, 159, 245, 0.54)',
+      'lanthanoids': 'rgba(245, 120, 220, 0.54)',
+      'actinoids': 'rgba(195, 120, 245, 0.54)'
+    };
+      console.log(elementColors);
+
       var elementDataset = elementData;
       var elementNumber = 0;
 
@@ -277,6 +312,9 @@ define(function(require, exports, module) {
         } else {
           //ADD ELEMENT
           elementNumber = elementNumber ++;
+          var elementColor = elementDataset[elementNumber].type;
+          //console.log(elementColor);
+          //console.log(elementColors[elementColor]);
 
           createElement({
             size: [width, height],
@@ -284,7 +322,7 @@ define(function(require, exports, module) {
             properties: {
               lineHeight: height + 'px',
               textAlign: 'center',
-              backgroundColor: 'rgba(242, 118, 118, 0.54)',
+              backgroundColor: elementColors[elementDataset[elementNumber].type],
               fontSize: '20px',
               overflow: 'hidden',
               color: 'white'
@@ -392,7 +430,7 @@ define(function(require, exports, module) {
         curve: 'easeOut'
       });
 
-      var opaqueTransitionable = new Transitionable(0);
+      var opaqueTransitionable = new Transitionable(1);
 
       this.translateModifiers[elementRandom].modifier.opacityFrom(function() {
         return opaqueTransitionable.get();
@@ -417,15 +455,16 @@ define(function(require, exports, module) {
 
       this.reconstructButton = new Surface({
         size: [true, true],
-        content: 'Reconstruct',
+        content: 'RECONSTRUCT',
         properties: {
-          color: 'white',
-          fontSize: '20px',
+          fontSize: this.options.buttonFontSize,
           padding: '10px',
           fontFamily: 'HelveticaNeue-Light',
           fontWeight: '100'
         }
       });
+
+      this.reconstructButton.addClass('button');
 
       this.add(this.reconstructButton);
 
@@ -435,16 +474,18 @@ define(function(require, exports, module) {
 
       this.createCubeButton = new Surface({
         size: [true, true],
-        content: 'Create Cube',
+        content: 'CREATE CUBE',
         properties: {
-          color: 'white',
-          fontSize: '20px',
+          fontSize: this.options.buttonFontSize,
           padding: '10px',
           marginTop: '50px',
           fontFamily: 'HelveticaNeue-Light',
           fontWeight: '100'
         }
       });
+
+      this.createCubeButton.addClass('button');
+
 
       this.add(this.createCubeButton);
 
@@ -455,16 +496,18 @@ define(function(require, exports, module) {
 
       this.randomDepthAnimationButton = new Surface({
         size: [true, true],
-        content: 'Scatter',
+        content: 'SCATTER',
         properties: {
-          color: 'white',
-          fontSize: '20px',
+          fontSize: this.options.buttonFontSize,
           padding: '10px',
           marginTop: '100px',
           fontFamily: 'HelveticaNeue-Light',
           fontWeight: '100'
         }
       });
+
+      this.randomDepthAnimationButton.addClass('button');
+
 
       this.add(this.randomDepthAnimationButton);
 
@@ -495,7 +538,7 @@ define(function(require, exports, module) {
     }
 
     function elementReturn() {
-      console.log(this.currentElement);
+      //console.log(this.currentElement);
 
       this.currentElement.modifier.setTransform(
         this.currentElement.params,
@@ -566,7 +609,7 @@ define(function(require, exports, module) {
       }
 
 
-      console.log(frontElements);
+      //console.log(frontElements);
 
 
 
@@ -610,7 +653,7 @@ define(function(require, exports, module) {
       }
 
 
-      console.log(backElements.length);
+      //console.log(backElements.length);
 
 
       for (var i = 0; i < backElements.length; i++){
@@ -650,7 +693,7 @@ define(function(require, exports, module) {
       for (elementSelectionLocation; elementSelectionLocation < 3 * elementsPerSide; elementSelectionLocation++){
         leftElements.push(allElements[elementSelectionLocation]);
       }
-      console.log(leftElements.length);
+      //console.log(leftElements.length);
 
 
       for (var i = 0; i < leftElements.length; i++){
@@ -691,7 +734,7 @@ define(function(require, exports, module) {
       for (elementSelectionLocation; elementSelectionLocation < 4 * elementsPerSide; elementSelectionLocation++){
         rightElements.push(allElements[elementSelectionLocation]);
       }
-      console.log(rightElements.length);
+      //console.log(rightElements.length);
 
 
       for (var i = 0; i < rightElements.length; i++){

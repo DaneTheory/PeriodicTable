@@ -11,3 +11,11 @@ body {
     user-select: none;
     background-color: #333;
 }
+
+.button {
+  color:white;
+}
+
+.button:hover {
+  color: rgba(242, 118, 118, 0.54);
+}
