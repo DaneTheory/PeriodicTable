@@ -35,6 +35,9 @@ define(function(require, exports, module) {
         var tableXDefault = 0;
         var xTransitionable = new Transitionable(tableXDefault);
 
+        var defaultRotationSpeed = 0;
+        var xRotationSpeed = new Transitionable(defaultRotationSpeed);
+
 
         /****************ANIMATION VARIABLES*******************/
         this.runRandomAnimation = false;
@@ -64,12 +67,17 @@ define(function(require, exports, module) {
           xTransitionable.set(mousePosition[1] / -150);
 
           //console.log()
+        });
+
+        mouseSync.on("end", function(data) {
+          xRotationSpeed.set(data.velocity[0]);
+          //smallQuaternion.add(xRotationSpeed.get());
         })
 
 
 
         var quaternion = new Quaternion(1, 0, 0, 0);
-        var smallQuaternion = new Quaternion(180, 0, 0, 0);
+        var smallQuaternion = new Quaternion(180, 0, 0.5, 0);
 
 
         var rotationModifier = new Modifier({
@@ -80,18 +88,24 @@ define(function(require, exports, module) {
           return quaternion.getTransform();
         });
 
+        var windowHeight = window.innerHeight;
+        var windowWidth = window.innerWidth;
+
         this.translateModifier = new Modifier({
-          origin: [0.5,0.5],
+          origin: [0,0],
+          align: [0,0],
           transform: function() {
-            return Transform.multiply(Transform.rotateY(yTransitionable.get()), Transform.rotateX(xTransitionable.get()))
+            // return Transform.multiply(Transform.rotateY(yTransitionable.get()), Transform.rotateX(xTransitionable.get()))
+            return Transform.multiply(Transform.translate(windowWidth/2,windowHeight/2,0), Transform.multiply(Transform.rotateY(yTransitionable.get()), Transform.rotateX(xTransitionable.get())))
+
           }.bind(this)
         });
 
 
 
 
-        var translateNode = mainEngine.add(rotationModifier);
-        translateNode.add(this.translateModifier).add(createTable(elementSize,elementSize,elementSize, tableWidth, tableHeight, this.options.elementData));
+        var translateNode = mainEngine.add(this.translateModifier);
+        translateNode.add(rotationModifier).add(createTable(elementSize,elementSize,elementSize, tableWidth, tableHeight, this.options.elementData));
 
         if (this.runRandomAnimation) {
         Timer.setTimeout(function() {
@@ -140,6 +154,7 @@ define(function(require, exports, module) {
     }
 
 
+
     function createTable(width, height, depth, tableWidth, tableHeight, elementData) {
       var table = new RenderNode();
 
@@ -147,6 +162,7 @@ define(function(require, exports, module) {
       this.elementSurfaces = [];
       this.translateModifiers = [];
       this.planeModifiers = [];
+      this.backModifiers = [];
       this.backPlaneModifiers = [];
 
 
@@ -212,6 +228,7 @@ define(function(require, exports, module) {
           this.translateModifiers.push(
             {modifier: modifier, translate: params.transform});
           this.planeModifiers.push(planeModifier);
+          this.backModifiers.push({modifier: backModifier, translate: params.transformBack});
           this.backPlaneModifiers.push(backPlaneModifier);
         };
 
@@ -369,13 +386,19 @@ define(function(require, exports, module) {
         curve: 'easeOut'
       });
 
+      this.backModifiers[elementRandom].modifier.setTransform(this.backModifiers[elementRandom].translate,
+        {
+        duration: 1500,
+        curve: 'easeOut'
+      });
+
       var opaqueTransitionable = new Transitionable(0);
 
       this.translateModifiers[elementRandom].modifier.opacityFrom(function() {
         return opaqueTransitionable.get();
       });
 
-      this.backPlaneModifiers[elementRandom].opacityFrom(function() {
+      this.backModifiers[elementRandom].modifier.opacityFrom(function() {
         return opaqueTransitionable.get();
       });
 
@@ -450,6 +473,7 @@ define(function(require, exports, module) {
       }.bind(this));
 
 
+
     }
 
     function elementClicked(name) {
@@ -518,7 +542,12 @@ define(function(require, exports, module) {
 
       for (var i = 0; i < usedElements.length; i++) {
         var usedElementNumber = usedElements[i];
+
         this.translateModifiers[i].modifier.opacityFrom(function() {
+          return opaqueTransitionable.get();
+        });
+
+        this.backModifiers[i].modifier.opacityFrom(function() {
           return opaqueTransitionable.get();
         });
 
@@ -561,21 +590,13 @@ define(function(require, exports, module) {
           curve: 'easeOut'
         });
 
-        // this.backPlaneModifiers[elementNumber].setTransform(
-        //   Transform.multiply(Transform.translate(((-cubeSize / 2) + (elementSize / 2) + (distance * columnNumber)),((-cubeSize / 2) + (elementSize / 2) + (distance * rowNumber)),-cubeSize/2), Transform.multiply(Transform.rotateZ(0), Transform.rotateX(0))),
-        //   {
-        //     duration: 1500,
-        //     curve: 'easeOut'
-        //   });
+        this.backModifiers[elementNumber].modifier.setTransform(
+          Transform.multiply(Transform.translate(((-cubeSize / 2) + (elementSize / 2) + (distance * columnNumber)),((-cubeSize / 2) + (elementSize / 2) + (distance * rowNumber)),cubeSize/2), Transform.multiply(Transform.rotateZ(Math.PI), Transform.rotateX(Math.PI))),
+          {
+            duration: 1500,
+            curve: 'easeOut'
+          });
 
-        //
-        //
-        // this.backPlaneModifiers[elementNumber].setTransform(
-        //   Transform.multiply(Transform.translate(0,0,140), Transform.multiply(Transform.rotateZ(0), Transform.rotateX(0))),
-        //   {
-        //   duration: 1500,
-        //   curve: 'easeOut'
-        // });
 
       }
 
@@ -607,6 +628,13 @@ define(function(require, exports, module) {
 
         this.translateModifiers[backElementNumber].modifier.setTransform(
           Transform.multiply(Transform.translate(((-cubeSize / 2) + (elementSize / 2) + (distance * backColumnNumber)),((-cubeSize / 2) + (elementSize / 2) + (distance * backRowNumber)),-cubeSize/2), Transform.multiply(Transform.rotateZ(Math.PI), Transform.rotateX(Math.PI))),
+          {
+          duration: 1500,
+          curve: 'easeOut'
+        });
+
+        this.backModifiers[backElementNumber].modifier.setTransform(
+          Transform.multiply(Transform.translate(((-cubeSize / 2) + (elementSize / 2) + (distance * backColumnNumber)),((-cubeSize / 2) + (elementSize / 2) + (distance * backRowNumber)),-cubeSize/2), Transform.multiply(Transform.rotateZ(0), Transform.rotateX(0))),
           {
           duration: 1500,
           curve: 'easeOut'
@@ -646,6 +674,13 @@ define(function(require, exports, module) {
           curve: 'easeOut'
         });
 
+        this.backModifiers[leftElementNumber].modifier.setTransform(
+          Transform.multiply(Transform.translate(cubeSize/2,yLocation,xLocation), Transform.rotateY(-Math.PI/2)),
+          {
+          duration: 1500,
+          curve: 'easeOut'
+        });
+
       }
 
       //RIGHT
@@ -675,6 +710,13 @@ define(function(require, exports, module) {
 
         this.translateModifiers[rightElementNumber].modifier.setTransform(
           Transform.multiply(Transform.translate(-cubeSize/2,yLocation,xLocation), Transform.rotateY(-Math.PI/2)),
+          {
+          duration: 1500,
+          curve: 'easeOut'
+        });
+
+        this.backModifiers[rightElementNumber].modifier.setTransform(
+          Transform.multiply(Transform.translate(-cubeSize/2,yLocation,xLocation), Transform.rotateY(Math.PI/2)),
           {
           duration: 1500,
           curve: 'easeOut'
@@ -714,6 +756,13 @@ define(function(require, exports, module) {
           curve: 'easeOut'
         });
 
+        this.backModifiers[topElementNumber].modifier.setTransform(
+          Transform.multiply(Transform.translate(xLocation, -cubeSize/2, yLocation), Transform.rotateX(-Math.PI/2)),
+          {
+          duration: 1500,
+          curve: 'easeOut'
+        });
+
       }
 
 
@@ -748,6 +797,13 @@ define(function(require, exports, module) {
           curve: 'easeOut'
         });
 
+        this.backModifiers[bottomElementNumber].modifier.setTransform(
+          Transform.multiply(Transform.translate(xLocation, cubeSize/2, yLocation), Transform.rotateX(Math.PI/2)),
+          {
+          duration: 1500,
+          curve: 'easeOut'
+        });
+
       }
 
 
@@ -770,7 +826,17 @@ define(function(require, exports, module) {
           curve: 'easeOut'
         });
 
+        this.backModifiers[extraElementNumber].modifier.setTransform(
+          Transform.translate(xRandom,yRandom,0), {
+          duration: 2000,
+          curve: 'easeOut'
+        });
+
         this.translateModifiers[extraElementNumber].modifier.opacityFrom(function() {
+          return opacityTransitionable.get();
+        });
+
+        this.backModifiers[extraElementNumber].modifier.opacityFrom(function() {
           return opacityTransitionable.get();
         });
 
@@ -781,20 +847,20 @@ define(function(require, exports, module) {
         });
 
       }
-
-      var backOpacity = new Transitionable(1);
-      for (var i = 0; i < 120; i++){
-
-        this.backPlaneModifiers[i].opacityFrom(function() {
-          return backOpacity.get();
-        });
-
-        backOpacity.set(0, {
-          method: 'tween',
-          curve: 'easeOut',
-          duration: 1000
-        });
-      }
+//
+      // var backOpacity = new Transitionable(1);
+      // for (var i = 0; i < 120; i++){
+      //
+      //   this.backPlaneModifiers[i].opacityFrom(function() {
+      //     return backOpacity.get();
+      //   });
+      //
+      //   backOpacity.set(0, {
+      //     method: 'tween',
+      //     curve: 'easeOut',
+      //     duration: 1000
+      //   });
+      // }
 
 
 

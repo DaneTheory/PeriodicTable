@@ -18,11 +18,11 @@ define(function(require, exports, module) {
 
 
 	var mainContext = Engine.createContext();
-	mainContext.setPerspective(1000);
+	//mainContext.setPerspective(1000);
 
 
 
-	var backgroundView = new BackgroundView();
+	//var backgroundView = new BackgroundView();
 
 	//var quaternionBox = new QuaternionBox();
 
@@ -33,8 +33,7 @@ define(function(require, exports, module) {
 
 
 
-
-	mainContext.add(backgroundView);
+	//mainContext.add(backgroundView);
 
 
 
