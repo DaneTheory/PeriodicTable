@@ -15,6 +15,8 @@ define(function(require, exports, module) {
     var GenericSync     = require('famous/inputs/GenericSync');
     var TouchSync       = require('famous/inputs/TouchSync');
     var MouseSync       = require('famous/inputs/MouseSync');
+    var ScrollSync      = require('famous/inputs/ScrollSync');
+    var PinchSync       = require('famous/inputs/PinchSync');
     var Accumulator     = require('famous/inputs/Accumulator');
     var EventHandler = require('famous/core/EventHandler');
     var EventMapper   = require('famous/events/EventMapper');
@@ -42,6 +44,9 @@ define(function(require, exports, module) {
 
         var tableXDefault = 0;
         var xTransitionable = new Transitionable(tableXDefault);
+
+        var tableZDefault = 0;
+        var zTransitionable = new Transitionable(tableZDefault);
 
 
         var defaultRotationSpeed = 0;
@@ -92,7 +97,39 @@ define(function(require, exports, module) {
 
         genericSync.on("end", function(data) {
           xRotationSpeed.set(data.velocity[0]);
-        })
+        });
+
+        /**********SCROLL SYNC*************/
+
+
+        var scrollPosition = [0, 0];
+        var scrollAccumulator = new Accumulator(scrollPosition);
+
+
+        var scrollSync = new ScrollSync();
+        Engine.pipe(scrollSync);
+        scrollSync.pipe(scrollAccumulator);
+
+        scrollSync.on("update", function(data) {
+          var scrolled = scrollAccumulator.get();
+          console.log(scrolled[1]);
+          zTransitionable.set(scrolled[1]);
+        }.bind(this));
+
+        /**********PINCH SYNC*************/
+
+        var pinchDistance = 0;
+        var pinchAccumulator = new Accumulator(pinchDistance);
+
+        var pinchSync = new PinchSync();
+        Engine.pipe(pinchSync);
+        pinchSync.pipe(pinchAccumulator);
+
+        pinchSync.on("update", function(data) {
+          var pinched = pinchAccumulator.get();
+          zTransitionable.set(pinched);
+        }.bind(this));
+
 
 
         var quaternion = new Quaternion(1, 0, 0, 0);
@@ -114,7 +151,7 @@ define(function(require, exports, module) {
           align: [0,0],
           transform: function() {
             // return Transform.multiply(Transform.rotateY(yTransitionable.get()), Transform.rotateX(xTransitionable.get()))
-            return Transform.multiply(Transform.translate(windowWidth/2,windowHeight/2,0), Transform.multiply(Transform.rotateY(yTransitionable.get()), Transform.rotateX(xTransitionable.get())))
+            return Transform.multiply(Transform.translate(windowWidth/2,windowHeight/2,zTransitionable.get()), Transform.multiply(Transform.rotateY(yTransitionable.get()), Transform.rotateX(xTransitionable.get())))
 
           }.bind(this)
         });
