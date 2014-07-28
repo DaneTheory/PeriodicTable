@@ -33,6 +33,10 @@ define(function(require, exports, module) {
         /****************TABLE VARIABLES*******************/
         var windowHeight = window.innerHeight;
         var windowWidth = window.innerWidth;
+        console.log('Window properties: ' + windowWidth + ', ' + windowHeight);
+
+
+
         var elementSize = 50;
         this.elementSize = 50;
         var tableWidth = elementSize * 18.72;
@@ -114,6 +118,8 @@ define(function(require, exports, module) {
           var scrolled = scrollAccumulator.get();
           console.log(scrolled[1]);
           zTransitionable.set(scrolled[1]);
+          var zDepth = zTransitionable.get();
+          this._eventOutput.emit('zChanged', zDepth);
         }.bind(this));
 
         /**********PINCH SYNC*************/
@@ -127,7 +133,10 @@ define(function(require, exports, module) {
 
         pinchSync.on("update", function(data) {
           var pinched = pinchAccumulator.get();
-          zTransitionable.set(pinched);
+          zTransitionable.set(pinched * 2);
+          var zDepth = zTransitionable.get();
+          this._eventOutput.emit('zChanged', zDepth);
+
         }.bind(this));
 
 
@@ -178,6 +187,7 @@ define(function(require, exports, module) {
 
         _createViewButton.call(this);
         _setPlanePositionListener.call(this);
+        _setSurfaceListener.call(this);
 
         this.add(mainEngine);
 
@@ -248,7 +258,7 @@ define(function(require, exports, module) {
 
         function createElement(params){
 
-          var surface = new Surface({
+          surface = new Surface({
             size: params.size,
             content: params.content,
             classes: params.classes,
@@ -310,6 +320,7 @@ define(function(require, exports, module) {
             if (this.currentElement != undefined && this.currentElement.name != name) {
               elementReturn();
             }
+
 
 
             var elementObject = {elementNumber: params.elementNumber, context: context, name: name, surface: surface, modifier: modifier, individualModifier: individualModifier, backSurface: backSurface, backModifier: backModifier, individualBackModifier: individualBackModifier, planeModifier: planeModifier, params: params.transform, backParams: params.transformBack, modifierChain: modifierChain};
@@ -685,14 +696,32 @@ define(function(require, exports, module) {
 
 //////////////////////////////////////INDIVIDUAL ELEMENT INTERACTION///////////////////////////////////////////
 
+    function _setSurfaceListener() {
+      var sync = new GenericSync(
+        ['mouse', 'touch'],
+        {direction : GenericSync.DIRECTION_X}
+      );
+
+      this.pipe(sync);
+
+      sync.on('update', function(data) {
+        console.log('surface data: ' + data);
+      }.bind(this));
+    }
+
     function _setPlanePositionListener() {
       var planeDefaults = [0,0];
       this.planeRotation = new Transitionable(planeDefaults);
+      var zDefault = 0;
+      this.zDepth = new Transitionable(zDefault);
 
       this.on('planeChanged', function(rotation) {
         this.planeRotation.set([rotation.xRotation, rotation.yRotation]);
         console.log(this.planeRotation.get());
+      });
 
+      this.on('zChanged', function(zDepth) {
+        this.zDepth.set(zDepth);
       });
     }
 
@@ -702,6 +731,9 @@ define(function(require, exports, module) {
       var element = elementClicked;
       var elementNumber = element.elementNumber;
       var currentPlaneRotation = element.context.planeRotation.get();
+
+      var zDepth = element.context.zDepth.get();
+      console.log(zDepth);
 
 
       //TODO
@@ -757,13 +789,13 @@ define(function(require, exports, module) {
 
 
       this.individualModifiers[elementNumber].setTransform(
-        Transform.translate(0, 0, 800), {
+        Transform.translate(0, 0, 900 - zDepth), {
         duration: 1500,
         curve:'easeOut'
       });
 
       this.individualBackModifiers[elementNumber].setTransform(
-        Transform.translate(0, 0, -800), {
+        Transform.translate(0, 0, -900 - zDepth), {
         duration: 1500,
         curve:'easeOut'
       });
