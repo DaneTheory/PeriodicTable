@@ -187,7 +187,6 @@ define(function(require, exports, module) {
 
         _createViewButton.call(this);
         _setPlanePositionListener.call(this);
-        _setSurfaceListener.call(this);
 
         this.add(mainEngine);
 
@@ -313,22 +312,53 @@ define(function(require, exports, module) {
 
           elementNumber++;
 
-          surface.on('click', function() {
-            var name = surface.getContent();
 
-            console.log('Current Element: ' + this.currentElement);
-            if (this.currentElement != undefined && this.currentElement.name != name) {
-              elementReturn();
-            }
+          // surface.on('click', function() {
+          //   var name = surface.getContent();
+          //
+          //   console.log('Current Element: ' + this.currentElement);
+          //   if (this.currentElement != undefined && this.currentElement.name != name) {
+          //     elementReturn();
+          //   }
+          //   var elementObject = {elementNumber: params.elementNumber, context: context, name: name, surface: surface, modifier: modifier, individualModifier: individualModifier, backSurface: backSurface, backModifier: backModifier, individualBackModifier: individualBackModifier, planeModifier: planeModifier, params: params.transform, backParams: params.transformBack, modifierChain: modifierChain};
+          //   elementClicked(elementObject);
+          //   context.checkPosition();
+          //   this.currentElement = elementObject;
+          // }.bind(this));
 
 
 
-            var elementObject = {elementNumber: params.elementNumber, context: context, name: name, surface: surface, modifier: modifier, individualModifier: individualModifier, backSurface: backSurface, backModifier: backModifier, individualBackModifier: individualBackModifier, planeModifier: planeModifier, params: params.transform, backParams: params.transformBack, modifierChain: modifierChain};
-            elementClicked(elementObject);
-            context.checkPosition();
-            this.currentElement = elementObject;
-            }.bind(this));
+          // var x = 0;
+          // var y = 0;
+          // var position = [x, y];
+          //
+          // var elementTransitionable = new Transitionable({xPosition: 0, yPosition: 0});
+          //
+          // var accumulator = new Accumulator(position);
+          // var elementSync = new GenericSync(['mouse', 'touch']);
+          //
+          // surface.pipe(elementSync);
+          // elementSync.pipe(accumulator);
+          //
+          // surface.on('click', function() {
+          //   console.log('surface clicked');
+          // }.bind(this));
+          //
+          // surface.on('update', function() {
+          //   console.log('surface updated');
+          //   var genericPosition = accumulator.get();
+          //   elementTransitionable.set([genericPosition[0]/150, genericPosition[1]/150]);
+          //   console.log('element listener ' + elementTransitionable);
+          //
+          //   }.bind(this));
+          //
+          //   surface.on('end', function() {
+          //     console.log('surface end');
+          //   }.bind(this));
 
+          // elementSync.on("end", function(data) {
+          //   xRotationSpeed.set(data.velocity[0]);
+          // });
 
 
 
@@ -343,6 +373,11 @@ define(function(require, exports, module) {
           this.individualBackModifiers.push(individualBackModifier);
           this.modifierChains.push(modifierChain);
           this.backRotationModifiers.push(backRotationModifier);
+
+          var elementObject = {elementNumber: params.elementNumber, context: context, name: name, surface: surface, modifier: modifier, individualModifier: individualModifier, backSurface: backSurface, backModifier: backModifier, individualBackModifier: individualBackModifier, planeModifier: planeModifier, params: params.transform, backParams: params.transformBack, modifierChain: modifierChain};
+          setElementSurfaceListeners(elementObject)
+
+
         };
 
 
@@ -434,7 +469,6 @@ define(function(require, exports, module) {
         }
 
       }
-
       return table;
     }
 
@@ -696,17 +730,97 @@ define(function(require, exports, module) {
 
 //////////////////////////////////////INDIVIDUAL ELEMENT INTERACTION///////////////////////////////////////////
 
-    function _setSurfaceListener() {
-      var sync = new GenericSync(
-        ['mouse', 'touch'],
-        {direction : GenericSync.DIRECTION_X}
-      );
+    function setElementSurfaceListeners(elementObject) {
+      //var elementObject = {elementNumber: params.elementNumber, context: context, name: name, surface: surface, modifier: modifier, individualModifier: individualModifier,
+      //  backSurface: backSurface, backModifier: backModifier, individualBackModifier: individualBackModifier, planeModifier: planeModifier, params: params.transform,
+      //  backParams: params.transformBack, modifierChain: modifierChain};
+      //this.elementSurfaces.push({surface: surface, properties: params.properties});
+      var context = elementObject.context;
+      var i = elementObject.elementNumber
 
-      this.pipe(sync);
 
-      sync.on('update', function(data) {
-        console.log('surface data: ' + data);
-      }.bind(this));
+      // console.log(this.elementSurfaces[i].surface);
+      // console.log(this.individualModifiers[i]);
+
+      var start = [0,0];
+      var elementTouchTransitionable = new Transitionable(start);
+
+      // this.individualModifiers[i].transformFrom(rotateY);
+      // this.individualBackModifiers[i].transformFrom(rotateY);
+
+      function rotateY() {
+        var xyValues = elementTouchTransitionable.get();
+        var xValue = xyValues[0] / 10;
+        return Transform.rotateY(xValue);
+      }
+
+
+      GenericSync.register({
+        mouse : MouseSync,
+        touch : TouchSync
+      });
+
+      var accumulator = new Accumulator(start);
+      var genericSync = new GenericSync(['mouse', 'touch']);
+
+      this.elementSurfaces[i].surface.pipe(genericSync);
+      genericSync.pipe(accumulator);
+
+      // this.elementSurfaces[i].surface.on('click', function() {
+      //   var name = elementObject.name;
+      //
+      //   console.log('Current Element: ' + this.currentElement);
+      //   if (this.currentElement != undefined && this.currentElement.name != name) {
+      //     elementReturn();
+      //   }
+      //   elementClicked(elementObject);
+      //   this.currentElement = elementObject;
+      // });
+
+      genericSync.on("update", function() {
+        var genericPosition = accumulator.get();
+        var xValue = genericPosition[0];
+        elementTouchTransitionable.set([genericPosition[0],genericPosition[1]]);
+        console.log('surface update called: ' + elementTouchTransitionable.get());
+      });
+
+      genericSync.on('end', function(data) {
+        var velocity = data.velocity;
+        var xVelocity = velocity[0];
+        var yVelocity = velocity[1];
+
+        // if (yVelocity < -1 || yVelocity > 1) {
+        //   relocateElement(i, xVelocity, yVelocity);
+        // }
+        relocateElement(i, xVelocity, yVelocity);
+
+
+
+
+
+        console.log('VELOCITY: ' + velocity);
+      });
+
+    }
+
+    function relocateElement(elementNumber, xVelocity, yVelocity) {
+      console.log('relocate element');
+
+      currentX = this.translateModifiers[elementNumber].translate[12];
+      currentY = this.translateModifiers[elementNumber].translate[13];
+
+      var flingSensitivity = 100;
+
+      var relocatedX = currentX + (xVelocity * flingSensitivity);
+      var relocatedY = currentY + (yVelocity * flingSensitivity);
+      console.log('currentXY: ' + currentX + ', ' + currentY);
+
+
+      this.translateModifiers[elementNumber].modifier.setTransform(
+        Transform.translate(relocatedX, relocatedY, 0), {
+        duration: 1500,
+        curve:'easeOut'
+      });
     }
 
     function _setPlanePositionListener() {
