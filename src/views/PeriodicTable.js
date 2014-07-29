@@ -21,6 +21,7 @@ define(function(require, exports, module) {
     var EventHandler = require('famous/core/EventHandler');
     var EventMapper   = require('famous/events/EventMapper');
     var ModifierChain = require('famous/modifiers/ModifierChain');
+    var RenderController = require('famous/views/RenderController');
 
 
 
@@ -62,6 +63,8 @@ define(function(require, exports, module) {
         this.animationTransitionable = new Transitionable(false);
         this.constructed = true;
         this.isColored = false;
+
+
 
 
 
@@ -165,11 +168,12 @@ define(function(require, exports, module) {
           }.bind(this)
         });
 
+        _setPlanePositionListener.call(this);
 
 
 
         var translateNode = mainEngine.add(this.translateModifier);
-        translateNode.add(rotationModifier).add(createTable(this, elementSize,elementSize,elementSize, tableWidth, tableHeight, this.options.elementData));
+        translateNode.add(rotationModifier).add(createTable(windowWidth, windowHeight, this, elementSize,elementSize,elementSize, tableWidth, tableHeight, this.options.elementData));
 
         if (this.runRandomAnimation) {
         Timer.setTimeout(function() {
@@ -186,9 +190,11 @@ define(function(require, exports, module) {
 
 
         _createViewButton.call(this);
-        _setPlanePositionListener.call(this);
+
 
         this.add(mainEngine);
+
+
 
 
     }
@@ -236,9 +242,11 @@ define(function(require, exports, module) {
       buttonFontSize: '17px'
     };
 
-    function createTable(content, width, height, depth, tableWidth, tableHeight, elementData) {
+    function createTable(windowWidth, windowHeight, content, width, height, depth, tableWidth, tableHeight, elementData) {
       var table = new RenderNode();
       var context = content;
+      var totalWidth = windowWidth;
+      var totalHeight = windowHeight;
       var elementNumber = 0;
       this.elementSurfaces = [];
       this.elementBackSurfaces = [];
@@ -252,12 +260,14 @@ define(function(require, exports, module) {
       this.backRotationModifiers = [];
 
       this.currentElement;
+      this.heldElements = [];
+
 
 
 
         function createElement(params){
 
-          surface = new Surface({
+          var surface = new Surface({
             size: params.size,
             content: params.content,
             classes: params.classes,
@@ -374,7 +384,7 @@ define(function(require, exports, module) {
           this.modifierChains.push(modifierChain);
           this.backRotationModifiers.push(backRotationModifier);
 
-          var elementObject = {elementNumber: params.elementNumber, context: context, name: name, surface: surface, modifier: modifier, individualModifier: individualModifier, backSurface: backSurface, backModifier: backModifier, individualBackModifier: individualBackModifier, planeModifier: planeModifier, params: params.transform, backParams: params.transformBack, modifierChain: modifierChain};
+          var elementObject = {tableWidth: tableWidth, tableHeight: tableHeight, elementNumber: params.elementNumber, mainParams: params, context: context, name: name, surface: surface, modifier: modifier, individualModifier: individualModifier, backSurface: backSurface, backModifier: backModifier, individualBackModifier: individualBackModifier, planeModifier: planeModifier, params: params.transform, backParams: params.transformBack, modifierChain: modifierChain};
           setElementSurfaceListeners(elementObject)
 
 
@@ -730,13 +740,41 @@ define(function(require, exports, module) {
 
 //////////////////////////////////////INDIVIDUAL ELEMENT INTERACTION///////////////////////////////////////////
 
+
+
+    function _setPlanePositionListener() {
+      var planeDefaults = [0,0];
+      this.planeRotation = new Transitionable(planeDefaults);
+      var zDefault = 0;
+      this.zDepth = new Transitionable(zDefault);
+
+      this.on('planeChanged', function(rotation) {
+        this.planeRotation.set([rotation.xRotation, rotation.yRotation]);
+        //console.log(this.planeRotation.get());
+      });
+
+      this.on('zChanged', function(zDepth) {
+        this.zDepth.set(zDepth);
+      });
+    }
+
+
+
+
     function setElementSurfaceListeners(elementObject) {
       //var elementObject = {elementNumber: params.elementNumber, context: context, name: name, surface: surface, modifier: modifier, individualModifier: individualModifier,
       //  backSurface: backSurface, backModifier: backModifier, individualBackModifier: individualBackModifier, planeModifier: planeModifier, params: params.transform,
       //  backParams: params.transformBack, modifierChain: modifierChain};
       //this.elementSurfaces.push({surface: surface, properties: params.properties});
       var context = elementObject.context;
-      var i = elementObject.elementNumber
+      var i = elementObject.elementNumber;
+      var params = elementObject.mainParams;
+      var tableDepth = context.zDepth.get();
+      var originalX = params.transform[12];
+      var originalY = params.transform[13];
+
+      //var currentPlaneDepth = elementObject.context.zDepth.get();
+
 
 
       // console.log(this.elementSurfaces[i].surface);
@@ -745,6 +783,8 @@ define(function(require, exports, module) {
       var start = [0,0];
       var elementTouchTransitionable = new Transitionable(start);
 
+      var iniMod = this.individualModifiers[i];
+      var iniBackMod = this.individualBackModifiers[i];
       // this.individualModifiers[i].transformFrom(rotateY);
       // this.individualBackModifiers[i].transformFrom(rotateY);
 
@@ -766,22 +806,36 @@ define(function(require, exports, module) {
       this.elementSurfaces[i].surface.pipe(genericSync);
       genericSync.pipe(accumulator);
 
-      // this.elementSurfaces[i].surface.on('click', function() {
+      // elementObject.surface.on('click', function() {
       //   var name = elementObject.name;
       //
       //   console.log('Current Element: ' + this.currentElement);
       //   if (this.currentElement != undefined && this.currentElement.name != name) {
-      //     elementReturn();
+      //     //elementReturn();
       //   }
-      //   elementClicked(elementObject);
+      //   //elementClicked(elementObject);
       //   this.currentElement = elementObject;
-      // });
+      // }.bind(this));
 
-      genericSync.on("update", function() {
+
+      genericSync.on("update", function(data) {
         var genericPosition = accumulator.get();
         var xValue = genericPosition[0];
         elementTouchTransitionable.set([genericPosition[0],genericPosition[1]]);
-        console.log('surface update called: ' + elementTouchTransitionable.get());
+        //console.log('surface update called: ' + elementTouchTransitionable.get());
+        console.log(data.velocity);
+        var Vx = data.velocity[0];
+        if (Vx > 0.01 && Vx < 1) {
+          //iniMod.transformFrom(rotateY);
+          //iniBackMod.transformFrom(rotateY);
+
+        }
+        if (Vx > 1) {
+          //relocateElement(elementObject, i, xVelocity, yVelocity);
+
+        }
+
+
       });
 
       genericSync.on('end', function(data) {
@@ -789,12 +843,34 @@ define(function(require, exports, module) {
         var xVelocity = velocity[0];
         var yVelocity = velocity[1];
 
-        // if (yVelocity < -1 || yVelocity > 1) {
-        //   relocateElement(i, xVelocity, yVelocity);
-        // }
-        relocateElement(i, xVelocity, yVelocity);
+        if (xVelocity > 1) {
+        relocateElement(elementObject, i, xVelocity, yVelocity);
+      } else if (xVelocity > 0.02 && xVelocity < 1) {
+        // iniMod.transformFrom(rotateY);
+        // iniBackMod.transformFrom(rotateY);
+      } else {
+        elementClicked(elementObject);
+      }
 
-
+//         var dupSurface = new Surface({
+//           size: params.size,
+//           content: params.content,
+//           classes: params.classes,
+//           properties: params.properties
+//         });
+//         console.log(context.zDepth.get());
+// //transform: Transform.translate((- tableWidth / 2) + (distance * rowNumber), (- tableHeight / 2) + (distance * columnNumber), 0),
+//         var depth = context.zDepth.get();
+//         console.log(originalX + ', ' + originalY + ', ' + depth);
+//
+//         var dupModifier = new Modifier({
+//           origin: [0.5,0.5],
+//           align: [0.5,0.5],
+//           transform: Transform.translate(originalX, originalY, depth)
+//         });
+//
+//
+//         context.add(dupModifier).add(dupSurface);
 
 
 
@@ -803,8 +879,15 @@ define(function(require, exports, module) {
 
     }
 
-    function relocateElement(elementNumber, xVelocity, yVelocity) {
+    function relocateElement(elementObject, elementNumber, xVelocity, yVelocity) {
       console.log('relocate element');
+
+
+      console.log(this.heldElements.length);
+      console.log(elementObject.tableWidth);
+
+
+      var currentPlaneRotation = elementObject.context.planeRotation.get();
 
       currentX = this.translateModifiers[elementNumber].translate[12];
       currentY = this.translateModifiers[elementNumber].translate[13];
@@ -813,30 +896,31 @@ define(function(require, exports, module) {
 
       var relocatedX = currentX + (xVelocity * flingSensitivity);
       var relocatedY = currentY + (yVelocity * flingSensitivity);
-      console.log('currentXY: ' + currentX + ', ' + currentY);
+      //console.log('currentXY: ' + currentX + ', ' + currentY);
+      console.log('relocated values: ' + relocatedX + ', ' + relocatedY);
 
+      var elementToHold = {element: elementObject, relocatedX: relocatedX, relocatedY: relocatedY};
+      this.heldElements.push(elementToHold);
+
+      this.individualModifiers[elementNumber].halt();
+      this.translateModifiers[elementNumber].modifier.halt();
+      this.planeModifiers[elementNumber].halt();
 
       this.translateModifiers[elementNumber].modifier.setTransform(
-        Transform.translate(relocatedX, relocatedY, 0), {
+        Transform.multiply(Transform.translate(elementObject.tableWidth - 50, relocatedY, 0), Transform.multiply(Transform.rotateX(-currentPlaneRotation[0]), Transform.rotateY(-currentPlaneRotation[1]))), {
+        duration: 1500,
+        curve: 'easeOut'
+      });
+
+      this.individualModifiers[elementNumber].setTransform(
+        Transform.translate(0, 0, 0), {
         duration: 1500,
         curve:'easeOut'
       });
-    }
 
-    function _setPlanePositionListener() {
-      var planeDefaults = [0,0];
-      this.planeRotation = new Transitionable(planeDefaults);
-      var zDefault = 0;
-      this.zDepth = new Transitionable(zDefault);
 
-      this.on('planeChanged', function(rotation) {
-        this.planeRotation.set([rotation.xRotation, rotation.yRotation]);
-        console.log(this.planeRotation.get());
-      });
 
-      this.on('zChanged', function(zDepth) {
-        this.zDepth.set(zDepth);
-      });
+
     }
 
     function elementClicked(elementClicked) {
@@ -886,6 +970,7 @@ define(function(require, exports, module) {
       var translate = this.translateModifiers[elementNumber].translate;
       var originalX = translate[12];
       var originalY = translate[13];
+
       this.translateModifiers[elementNumber].modifier.setTransform(
         Transform.multiply(Transform.translate(0, 0, 0), Transform.multiply(Transform.rotateX(-currentPlaneRotation[0]), Transform.rotateY(-currentPlaneRotation[1]))), {
         duration: 1500,
