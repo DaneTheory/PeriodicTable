@@ -24,6 +24,9 @@ define(function(require, exports, module) {
     var RenderController = require('famous/views/RenderController');
 
 
+    var ElementView = require('views/ElementView');
+
+
 
     function PeriodicTable() {
         View.apply(this, arguments);
@@ -66,7 +69,7 @@ define(function(require, exports, module) {
 
 
 
-
+        this.heldElements = [];
 
         /****************ACCUMULATOR VARIABLES****************/
 
@@ -96,7 +99,7 @@ define(function(require, exports, module) {
           //console.log(mousePosition[0]);
           yTransitionable.set(genericPosition[0] / 150);
           xTransitionable.set(genericPosition[1] / -150);
-          //console.log('x & y Rotation: ' + xTransitionable.get() + ', ' + yTransitionable.get())
+          console.log('x & y Rotation: ' + xTransitionable.get() + ', ' + yTransitionable.get())
           var planeRotation = {xRotation: xTransitionable.get(), yRotation: yTransitionable.get()};
           this._eventOutput.emit('planeChanged', planeRotation);
 
@@ -163,7 +166,7 @@ define(function(require, exports, module) {
           align: [0,0],
           transform: function() {
             // return Transform.multiply(Transform.rotateY(yTransitionable.get()), Transform.rotateX(xTransitionable.get()))
-            return Transform.multiply(Transform.translate(windowWidth/2,windowHeight/2,zTransitionable.get()), Transform.multiply(Transform.rotateY(yTransitionable.get()), Transform.rotateX(xTransitionable.get())))
+            return Transform.multiply(Transform.translate(windowWidth/2 + elementSize/2,windowHeight/2 + elementSize/2,zTransitionable.get()), Transform.multiply(Transform.rotateY(yTransitionable.get()), Transform.rotateX(xTransitionable.get())))
 
           }.bind(this)
         });
@@ -190,7 +193,6 @@ define(function(require, exports, module) {
 
 
         _createViewButton.call(this);
-
 
         this.add(mainEngine);
 
@@ -226,12 +228,14 @@ define(function(require, exports, module) {
         colorByWeight(i, this.options.elementData, this.isColored);
       }
       this.isColored = !this.isColored;
-    }
+    };
 
 
-    PeriodicTable.prototype.checkPosition = function() {
-      //console.log(this.elementSize);
-    }
+    PeriodicTable.prototype.holdElements = function(elementNumber) {
+      this.heldElements.push(elementNumber);
+      console.log('hold Elements called. length: ' + this.heldElements.length);
+
+    };
 
 
 
@@ -263,7 +267,6 @@ define(function(require, exports, module) {
       this.breakerModifiers = [];
 
       this.currentElement;
-      this.heldElements = [];
 
       this.breakerOn = true;
 
@@ -499,6 +502,13 @@ define(function(require, exports, module) {
       return this.table;
     }
 
+
+
+
+
+
+
+
     function startStopDepthAnimation(run) {
 
       for (var i = 0; i < 400; i++) {
@@ -550,6 +560,8 @@ define(function(require, exports, module) {
 
     function resetElementDepth(elementNumber) {
       var elementRandom = elementNumber;
+
+      unfreezeElement(elementNumber);
 
       this.planeModifiers[elementRandom].setTransform(
         Transform.translate(0,0,0),
@@ -765,9 +777,11 @@ define(function(require, exports, module) {
       var zDefault = 0;
       this.zDepth = new Transitionable(zDefault);
 
+
       this.on('planeChanged', function(rotation) {
         this.planeRotation.set([rotation.xRotation, rotation.yRotation]);
         //console.log(this.planeRotation.get());
+        //console.log(this.heldElements.length);
       });
 
       this.on('zChanged', function(zDepth) {
@@ -789,6 +803,8 @@ define(function(require, exports, module) {
       var tableDepth = context.zDepth.get();
       var originalX = params.transform[12];
       var originalY = params.transform[13];
+      var heldElements = this.heldElements;
+
 
 
       //var currentPlaneDepth = elementObject.context.zDepth.get();
@@ -874,6 +890,16 @@ define(function(require, exports, module) {
             //modifierChain.removeModifier(breakerModifier);
             unfreezeElement(i);
 
+            var currentPlaneRotation = context.planeRotation.get();
+            var tableXRotation = currentPlaneRotation[0];
+            var tableYRotation = currentPlaneRotation[1];
+
+
+
+
+
+            _createFakeElement(context, elementObject, tableXRotation, tableYRotation, originalX, originalY);
+
             relocateElement(elementObject, i, xVelocity, yVelocity);
 
 
@@ -885,6 +911,7 @@ define(function(require, exports, module) {
         //modifierChain.removeModifier(breakerModifier);
         unfreezeElement(i);
         elementClicked(elementObject);
+        //context.holdElements(i);
       }
 
 //         var dupSurface = new Surface({
@@ -914,6 +941,25 @@ define(function(require, exports, module) {
 
     }
 
+
+        function _createFakeElement(context, elementObject, tableXRotation, tableYRotation, originalX, originalY) {
+          context.fakeTable = new ElementView({
+            tableSize : [context.elementSize * 18.72, context.elementSize * 10.4],
+            tableXRotation : tableXRotation,
+            tableYRotation : tableYRotation,
+            elementSize : context.elementSize,
+            elementXTranslate : originalX,
+            elementYTranslate : originalY
+          });
+
+          context.add(context.fakeTable);
+        }
+
+
+
+
+
+
     function flipElement(elementObject, elementNumber, xVelocity, yVelocity) {
 
       //console.log(this.individualModifiers[elementNumber].getTransform());
@@ -934,11 +980,11 @@ define(function(require, exports, module) {
     }
 
     function freezeElement(elementNumber) {
-      //this.modifierChains[elementNumber].addModifier(this.breakerModifiers[elementNumber]);
+      this.modifierChains[elementNumber].addModifier(this.breakerModifiers[elementNumber]);
     }
 
     function unfreezeElement(elementNumber) {
-      //this.modifierChains[elementNumber].removeModifier(this.breakerModifiers[elementNumber]);
+      this.modifierChains[elementNumber].removeModifier(this.breakerModifiers[elementNumber]);
     }
 
 
@@ -953,6 +999,7 @@ define(function(require, exports, module) {
 
 
       var currentPlaneRotation = elementObject.context.planeRotation.get();
+      var currentZDepth = elementObject.context.zDepth.get();
 
       currentX = this.translateModifiers[elementNumber].translate[12];
       currentY = this.translateModifiers[elementNumber].translate[13];
@@ -967,7 +1014,7 @@ define(function(require, exports, module) {
       //console.log('relocated values: ' + relocatedX + ', ' + relocatedY);
 
       var elementToHold = {element: elementObject, relocatedX: relocatedX, relocatedY: relocatedY};
-      this.heldElements.push(elementToHold);
+      //this.heldElements.push(elementToHold);
 
       this.individualModifiers[elementNumber].halt();
       this.translateModifiers[elementNumber].modifier.halt();
@@ -1040,7 +1087,7 @@ define(function(require, exports, module) {
       var originalY = translate[13];
 
       this.translateModifiers[elementNumber].modifier.setTransform(
-        Transform.multiply(Transform.translate(elementObject.tableWidth - 50, relocatedY, 0), Transform.multiply(Transform.rotateX(-currentPlaneRotation[0]), Transform.rotateY(-currentPlaneRotation[1]))), {
+        Transform.multiply(Transform.translate(originalX, originalY, 0), Transform.multiply(Transform.rotateX(-currentPlaneRotation[0]), Transform.rotateY(-currentPlaneRotation[1]))), {
         duration: 1500,
         curve: 'easeOut'
       });
@@ -1054,8 +1101,9 @@ define(function(require, exports, module) {
         curve: 'easeOut'
       });
 
+
       this.individualModifiers[elementNumber].setTransform(
-        Transform.translate(0, 0, 0), {
+        Transform.translate(800, 0, 0), {
         duration: 1500,
         curve:'easeOut'
       });
@@ -1065,6 +1113,19 @@ define(function(require, exports, module) {
         duration: 1500,
         curve:'easeOut'
       });
+
+      // var transform = Tran
+      //
+      // this.modifierChains[elementNumber].addModifier(new StateModifier({
+      //   origin: [0.5,0.5],
+      //   align: [0.5,0.5],
+      //   transform: Transform.translate(-900,0,0), {
+      //     duration: 1500,
+      //     curve: 'easeOut'
+      //   }
+      // }));
+
+
 
 
       Timer.setTimeout(function() {
@@ -1089,11 +1150,38 @@ define(function(require, exports, module) {
       var translateValues = this.planeModifiers[elementNumber].getFinalTransform();
       var currentZ = translateValues[14];
 
+      var transValues = this.translateModifiers[elementNumber].modifier.getFinalTransform();
+      var currentTransX = transValues[12];
+      var currentTransY = transValues[13];
+      console.log('transValues: ' + transValues);
+
+      var individualTranslate = this.individualModifiers[elementNumber].getFinalTransform();
+      var currentIndividualZ = individualTranslate[14];
+
+
+      console.log('modifier: ' + individualTranslate);
+
+
       console.log(this.elementDetailViewOn);
 
 
       this.planeModifiers[elementNumber].halt();
       this.backPlaneModifiers[elementNumber].halt();
+
+
+
+
+      this.individualModifiers[elementNumber].setTransform(
+        Transform.translate(0, 0, currentIndividualZ), {
+        duration: 0,
+        curve:'easeOut'
+      });
+      this.translateModifiers[elementNumber].modifier.setTransform(
+        Transform.multiply(Transform.translate(currentTransX, currentTransY, 0), Transform.multiply(Transform.rotateX(-currentPlaneRotation[0]), Transform.rotateY(-currentPlaneRotation[1]))), {
+        duration: 0,
+        curve: 'easeOut'
+      });
+
 
       this.planeModifiers[elementNumber].setTransform(
         Transform.translate(0,0,0),
