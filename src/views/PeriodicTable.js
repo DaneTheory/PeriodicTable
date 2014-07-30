@@ -119,7 +119,7 @@ define(function(require, exports, module) {
 
         scrollSync.on("update", function(data) {
           var scrolled = scrollAccumulator.get();
-          console.log(scrolled[1]);
+          //console.log(scrolled[1]);
           zTransitionable.set(scrolled[1]);
           var zDepth = zTransitionable.get();
           this._eventOutput.emit('zChanged', zDepth);
@@ -243,7 +243,9 @@ define(function(require, exports, module) {
     };
 
     function createTable(windowWidth, windowHeight, content, width, height, depth, tableWidth, tableHeight, elementData) {
-      var table = new RenderNode();
+      this.table = new RenderNode();
+
+
       var context = content;
       var totalWidth = windowWidth;
       var totalHeight = windowHeight;
@@ -258,9 +260,14 @@ define(function(require, exports, module) {
       this.individualBackModifiers = [];
       this.modifierChains = [];
       this.backRotationModifiers = [];
+      this.breakerModifiers = [];
 
       this.currentElement;
       this.heldElements = [];
+
+      this.breakerOn = true;
+
+      this.elementDetailViewOn = false;
 
 
 
@@ -301,21 +308,30 @@ define(function(require, exports, module) {
           var planeModifier = new Modifier();
           var backPlaneModifier = new Modifier();
 
+          var breakerModifier = new Modifier();
+          breakerModifier.setTransform(
+            Transform.translate());
+
           modifierChain = new ModifierChain();
 
-
+          modifierChain.addModifier(breakerModifier);
           modifierChain.addModifier(modifier);
           modifierChain.addModifier(planeModifier);
           modifierChain.addModifier(individualModifier);
 
-          var node = table.add(modifier);
-          var modifierNode = node.add(planeModifier)
-          modifierNode.add(individualModifier).add(surface);
+          modifierChain.removeModifier(breakerModifier);
 
 
-          //table.add(modifierChain).add(surface);
 
-          var nodeBack = table.add(backModifier);
+          // var node = this.table.add(modifier);
+          // var modifierNode = node.add(planeModifier);
+          // var breakerNode = modifierNode.add(individualModifier);
+          // breakerNode.add(breakerModifier).add(surface);
+
+
+          table.add(modifierChain).add(surface);
+
+          var nodeBack = this.table.add(backModifier);
           var modifierBackNode = nodeBack.add(backPlaneModifier);
           var rotationModifierBackNode = modifierBackNode.add(backRotationModifier);
           rotationModifierBackNode.add(individualBackModifier).add(backSurface);
@@ -383,6 +399,7 @@ define(function(require, exports, module) {
           this.individualBackModifiers.push(individualBackModifier);
           this.modifierChains.push(modifierChain);
           this.backRotationModifiers.push(backRotationModifier);
+          this.breakerModifiers.push(breakerModifier);
 
           var elementObject = {tableWidth: tableWidth, tableHeight: tableHeight, elementNumber: params.elementNumber, mainParams: params, context: context, name: name, surface: surface, modifier: modifier, individualModifier: individualModifier, backSurface: backSurface, backModifier: backModifier, individualBackModifier: individualBackModifier, planeModifier: planeModifier, params: params.transform, backParams: params.transformBack, modifierChain: modifierChain};
           setElementSurfaceListeners(elementObject)
@@ -479,7 +496,7 @@ define(function(require, exports, module) {
         }
 
       }
-      return table;
+      return this.table;
     }
 
     function startStopDepthAnimation(run) {
@@ -773,6 +790,7 @@ define(function(require, exports, module) {
       var originalX = params.transform[12];
       var originalY = params.transform[13];
 
+
       //var currentPlaneDepth = elementObject.context.zDepth.get();
 
 
@@ -785,6 +803,9 @@ define(function(require, exports, module) {
 
       var iniMod = this.individualModifiers[i];
       var iniBackMod = this.individualBackModifiers[i];
+      var modifierChain = this.modifierChains[i];
+      var breakerModifier = this.breakerModifiers[i];
+
       // this.individualModifiers[i].transformFrom(rotateY);
       // this.individualBackModifiers[i].transformFrom(rotateY);
 
@@ -823,32 +844,46 @@ define(function(require, exports, module) {
         var xValue = genericPosition[0];
         elementTouchTransitionable.set([genericPosition[0],genericPosition[1]]);
         //console.log('surface update called: ' + elementTouchTransitionable.get());
-        console.log(data.velocity);
+        //console.log(data.velocity);
         var Vx = data.velocity[0];
+        var Vy = data.velocity[1];
         if (Vx > 0.01 && Vx < 1) {
           //iniMod.transformFrom(rotateY);
           //iniBackMod.transformFrom(rotateY);
 
         }
-        if (Vx > 1) {
-          //relocateElement(elementObject, i, xVelocity, yVelocity);
+        if (Vx > 1 || Vx < -1 || Vy > 1 || Vy < -1) {
+          //relocateElement(elementObject, i, Vx, Vy);
 
         }
 
 
       });
 
+
+
+
       genericSync.on('end', function(data) {
         var velocity = data.velocity;
         var xVelocity = velocity[0];
         var yVelocity = velocity[1];
 
-        if (xVelocity > 1) {
-        relocateElement(elementObject, i, xVelocity, yVelocity);
+
+      if (xVelocity > 1 || yVelocity > 1 || xVelocity < -1 || yVelocity < -1) {
+            //elementReturn(elementObject, i, xVelocity, yVelocity);
+            //modifierChain.removeModifier(breakerModifier);
+            unfreezeElement(i);
+
+            relocateElement(elementObject, i, xVelocity, yVelocity);
+
+
       } else if (xVelocity > 0.02 && xVelocity < 1) {
+        //flipElement(elementObject, i, xVelocity,yVelocity);
         // iniMod.transformFrom(rotateY);
         // iniBackMod.transformFrom(rotateY);
       } else {
+        //modifierChain.removeModifier(breakerModifier);
+        unfreezeElement(i);
         elementClicked(elementObject);
       }
 
@@ -879,12 +914,42 @@ define(function(require, exports, module) {
 
     }
 
+    function flipElement(elementObject, elementNumber, xVelocity, yVelocity) {
+
+      //console.log(this.individualModifiers[elementNumber].getTransform());
+
+
+      this.individualModifiers[elementNumber].setTransform(
+        Transform.rotateY(Math.PI), {
+        duration: 1500,
+        curve:'easeOut'
+      });
+
+      this.individualBackModifiers[elementNumber].setTransform(
+        Transform.translate(Math.PI), {
+        duration: 1500,
+        curve:'easeOut'
+      });
+
+    }
+
+    function freezeElement(elementNumber) {
+      //this.modifierChains[elementNumber].addModifier(this.breakerModifiers[elementNumber]);
+    }
+
+    function unfreezeElement(elementNumber) {
+      //this.modifierChains[elementNumber].removeModifier(this.breakerModifiers[elementNumber]);
+    }
+
+
     function relocateElement(elementObject, elementNumber, xVelocity, yVelocity) {
-      console.log('relocate element');
+      //console.log('relocate element');
 
 
-      console.log(this.heldElements.length);
-      console.log(elementObject.tableWidth);
+      //console.log(this.heldElements.length);
+      //console.log(elementObject.tableWidth);
+      //console.log(this.elementDetailViewOn);
+
 
 
       var currentPlaneRotation = elementObject.context.planeRotation.get();
@@ -896,8 +961,10 @@ define(function(require, exports, module) {
 
       var relocatedX = currentX + (xVelocity * flingSensitivity);
       var relocatedY = currentY + (yVelocity * flingSensitivity);
+
+      var transform = Transform.multiply(Transform.translate(relocatedX, relocatedY, 0), Transform.multiply(Transform.rotateX(-currentPlaneRotation[0]), Transform.rotateY(-currentPlaneRotation[1])));
       //console.log('currentXY: ' + currentX + ', ' + currentY);
-      console.log('relocated values: ' + relocatedX + ', ' + relocatedY);
+      //console.log('relocated values: ' + relocatedX + ', ' + relocatedY);
 
       var elementToHold = {element: elementObject, relocatedX: relocatedX, relocatedY: relocatedY};
       this.heldElements.push(elementToHold);
@@ -906,8 +973,83 @@ define(function(require, exports, module) {
       this.translateModifiers[elementNumber].modifier.halt();
       this.planeModifiers[elementNumber].halt();
 
+
+      if (yVelocity < -1 && this.elementDetailViewOn) {
+        transform = this.translateModifiers[elementNumber].translate;
+        this.elementDetailViewOn = false;
+        //console.log('post set boolean' + this.elementDetailViewOn);
+      }
+
+
+      // this.translateModifiers[elementNumber].modifier.setTransform(
+      //   transform, {
+      //   duration: 1500,
+      //   curve: 'easeOut'
+      // });
+      //
+      // this.individualModifiers[elementNumber].setTransform(
+      //   Transform.translate(0, 0, 0), {
+      //   duration: 1500,
+      //   curve:'easeOut'
+      // });
+
+
+
+      //
+      // Timer.setTimeout(function() {
+      //   this.breakerModifiers[elementNumber].setTransform(
+      //     Transform.translate());
+      //
+      //   this.breakerModifiers[elementNumber].setTransform(
+      //     Transform.translate());
+      //
+      // }.bind(this), 1500);
+
+
+
+
+
+
+      this.planeModifiers[elementNumber].setTransform(
+        Transform.translate(0,0,0),
+        {
+        duration: 1500,
+        curve: 'easeOut'
+      });
+      this.planeModifiers[elementNumber].setTransform(
+        Transform.translate(0,0,0),
+        {
+        duration: 1500,
+        curve: 'easeOut'
+      });
+      this.backPlaneModifiers[elementNumber].setTransform(
+        Transform.translate(0,0,0),
+        {
+        duration: 1500,
+        curve: 'easeOut'
+      });
+      this.backPlaneModifiers[elementNumber].setTransform(
+        Transform.translate(0,0,0),
+        {
+        duration: 1500,
+        curve: 'easeOut'
+      });
+
+      var translate = this.translateModifiers[elementNumber].translate;
+      var originalX = translate[12];
+      var originalY = translate[13];
+
       this.translateModifiers[elementNumber].modifier.setTransform(
         Transform.multiply(Transform.translate(elementObject.tableWidth - 50, relocatedY, 0), Transform.multiply(Transform.rotateX(-currentPlaneRotation[0]), Transform.rotateY(-currentPlaneRotation[1]))), {
+        duration: 1500,
+        curve: 'easeOut'
+      });
+      this.backModifiers[elementNumber].modifier.setTransform(
+        Transform.multiply(Transform.translate(0,0,0), Transform.multiply(Transform.rotateZ(Math.PI), Transform.rotateX(Math.PI))), {
+        duration: 1500,
+        curve: 'easeOut'
+      });
+      this.backRotationModifiers[elementNumber].setTransform(Transform.multiply(Transform.rotateX(currentPlaneRotation[0]), Transform.rotateY(-currentPlaneRotation[1])), {
         duration: 1500,
         curve: 'easeOut'
       });
@@ -918,8 +1060,16 @@ define(function(require, exports, module) {
         curve:'easeOut'
       });
 
+      this.individualBackModifiers[elementNumber].setTransform(
+        Transform.translate(0, 0, 0), {
+        duration: 1500,
+        curve:'easeOut'
+      });
 
 
+      Timer.setTimeout(function() {
+        freezeElement(elementNumber);
+      }.bind(this), 1500);
 
     }
 
@@ -931,7 +1081,7 @@ define(function(require, exports, module) {
       var currentPlaneRotation = element.context.planeRotation.get();
 
       var zDepth = element.context.zDepth.get();
-      console.log(zDepth);
+      //console.log(zDepth);
 
 
       //TODO
@@ -939,8 +1089,21 @@ define(function(require, exports, module) {
       var translateValues = this.planeModifiers[elementNumber].getFinalTransform();
       var currentZ = translateValues[14];
 
+      console.log(this.elementDetailViewOn);
+
+
       this.planeModifiers[elementNumber].halt();
       this.backPlaneModifiers[elementNumber].halt();
+
+      this.planeModifiers[elementNumber].setTransform(
+        Transform.translate(0,0,0),
+        {
+        duration: 1500,
+        curve: 'easeOut'
+      });
+
+
+
       this.planeModifiers[elementNumber].setTransform(
         Transform.translate(0,0,0),
         {
@@ -999,44 +1162,58 @@ define(function(require, exports, module) {
         curve:'easeOut'
       });
 
+      Timer.setTimeout(function() {
+        freezeElement(elementNumber);
+
+      }.bind(this), 1500);
+
+
+      this.elementDetailViewOn = true;
+      console.log('post set boolean' + this.elementDetailViewOn);
+
       console.log('RotatedX: ' + -currentPlaneRotation[0] + ",  " + 'RotatedY: ' + -currentPlaneRotation[1]);
 
     }
 
-    function elementReturn() {
 
 
+
+    function elementReturn(elementObject, elementNumber, xVelocity, yVelocity) {
+
+      console.log('elementReturnCalled');
 
       var currentElementNumber = this.currentElement.elementNumber;
       console.log(currentElementNumber);
 
-      this.translateModifiers[currentElementNumber].modifier.setTransform(
-        this.translateModifiers[currentElementNumber].translate, {
+      this.translateModifiers[elementNumber].modifier.setTransform(
+        this.translateModifiers[elementNumber].translate, {
         duration: 1500,
         curve: 'easeOut'
       });
-      this.backModifiers[currentElementNumber].modifier.setTransform(
-        this.backModifiers[currentElementNumber].translate, {
+      this.backModifiers[elementNumber].modifier.setTransform(
+        this.backModifiers[elementNumber].translate, {
         duration: 1500,
         curve: 'easeOut'
       });
-      this.backRotationModifiers[currentElementNumber].setTransform(Transform.multiply(Transform.rotateX(0), Transform.rotateY(0)), {
+      this.backRotationModifiers[elementNumber].setTransform(Transform.multiply(Transform.rotateX(0), Transform.rotateY(0)), {
         duration: 1500,
         curve: 'easeOut'
       });
 
 
-      this.individualModifiers[currentElementNumber].setTransform(
+      this.individualModifiers[elementNumber].setTransform(
         Transform.translate(0, 0, 0), {
         duration: 1500,
         curve:'easeOut'
       });
 
-      this.individualBackModifiers[currentElementNumber].setTransform(
+      this.individualBackModifiers[elementNumber].setTransform(
         Transform.translate(0, 0, 0), {
         duration: 1500,
         curve:'easeOut'
       });
+
+
 
       // this.currentElement.modifier.setTransform(
       //   this.currentElement.params,
