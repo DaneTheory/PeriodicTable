@@ -13,6 +13,7 @@ define(function(require, exports, module) {
 	var BackgroundView = require('views/BackgroundView');
 	var PeriodicTable = require('views/PeriodicTable');
 	var ElementData = require('data/ElementData');
+	var TestView 		= require('views/TestView');
 
 
 
@@ -26,10 +27,13 @@ define(function(require, exports, module) {
 
 	//var quaternionBox = new QuaternionBox();
 
-	var periodicTable = new PeriodicTable({
+	// var periodicTable = new PeriodicTable({
+	// 	elementData: ElementData
+	// });
+
+	var testView = new TestView({
 		elementData: ElementData
 	});
-
 
 
 
@@ -39,6 +43,6 @@ define(function(require, exports, module) {
 
 
 
-	mainContext.add(periodicTable);
+	mainContext.add(testView);
 
 });
