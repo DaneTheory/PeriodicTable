@@ -28,6 +28,9 @@ define(function(require, exports, module) {
         this.elementSize = 50;
         this.tableWidth = this.elementSize * 18.72;
         this.tableHeight = this.elementSize * 10.4;
+        this.windowHeight = window.innerHeight;
+        this.windowWidth = window.innerWidth;
+        console.log(this.windowWidth);
 
 
 
@@ -67,6 +70,17 @@ define(function(require, exports, module) {
         scrollSync.on('update', function(data) {
           var scrolled = scrollAccumulator.get();
           this._eventOutput.emit('planeZChanged', scrolled[1]);
+        }.bind(this));
+
+
+        var pinchAccumulator = new Accumulator(0);
+        var pinchSync = new PinchSync();
+        Engine.pipe(pinchSync);
+        pinchSync.pipe(pinchAccumulator);
+
+        pinchSync.on('update', function(data) {
+          var pinched = pinchAccumulator.get() * 2;
+          this._eventOutput.emit('planeZChanged', pinched);
         }.bind(this));
 
 
@@ -323,7 +337,7 @@ define(function(require, exports, module) {
       }
 
       function translateRight(velocity) {
-        relocatedX = 700;
+        relocatedX = context.windowWidth / 2.778;
         relocatedY = (velocity[1] * 100);
         relocatedZ = 200;
         // var original = context.elementElements[i].original;
@@ -370,7 +384,7 @@ define(function(require, exports, module) {
 
       this.on('planeZChanged', function(scroll) {
         this.zTransitionable.set(scroll);
-      })
+      });
     }
 
 

@@ -232,8 +232,8 @@ define(function(require, exports, module) {
 
 
     PeriodicTable.prototype.holdElements = function(elementNumber) {
-      this.heldElements.push(elementNumber);
-      console.log('hold Elements called. length: ' + this.heldElements.length);
+      //this.heldElements.push(elementNumber);
+      //console.log('hold Elements called. perspective: ' + this.mainEngine.getPersepective());
 
     };
 
@@ -326,13 +326,12 @@ define(function(require, exports, module) {
 
 
 
-          // var node = this.table.add(modifier);
-          // var modifierNode = node.add(planeModifier);
-          // var breakerNode = modifierNode.add(individualModifier);
-          // breakerNode.add(breakerModifier).add(surface);
+          var node = this.table.add(modifier);
+          var modifierNode = node.add(planeModifier);
+          modifierNode.add(individualModifier).add(surface);
 
 
-          table.add(modifierChain).add(surface);
+          //table.add(modifierChain).add(surface);
 
           var nodeBack = this.table.add(backModifier);
           var modifierBackNode = nodeBack.add(backPlaneModifier);
@@ -896,9 +895,10 @@ define(function(require, exports, module) {
 
 
 
+            context.holdElements(i);
 
 
-            _createFakeElement(context, elementObject, tableXRotation, tableYRotation, originalX, originalY);
+            //_createFakeElement(context, elementObject, tableXRotation, tableYRotation, originalX, originalY);
 
             relocateElement(elementObject, i, xVelocity, yVelocity);
 
@@ -909,9 +909,8 @@ define(function(require, exports, module) {
         // iniBackMod.transformFrom(rotateY);
       } else {
         //modifierChain.removeModifier(breakerModifier);
-        unfreezeElement(i);
+        //unfreezeElement(i);
         elementClicked(elementObject);
-        //context.holdElements(i);
       }
 
 //         var dupSurface = new Surface({
@@ -995,7 +994,6 @@ define(function(require, exports, module) {
       //console.log(this.heldElements.length);
       //console.log(elementObject.tableWidth);
       //console.log(this.elementDetailViewOn);
-
 
 
       var currentPlaneRotation = elementObject.context.planeRotation.get();
@@ -1171,16 +1169,16 @@ define(function(require, exports, module) {
 
 
 
-      this.individualModifiers[elementNumber].setTransform(
-        Transform.translate(0, 0, currentIndividualZ), {
-        duration: 0,
-        curve:'easeOut'
-      });
-      this.translateModifiers[elementNumber].modifier.setTransform(
-        Transform.multiply(Transform.translate(currentTransX, currentTransY, 0), Transform.multiply(Transform.rotateX(-currentPlaneRotation[0]), Transform.rotateY(-currentPlaneRotation[1]))), {
-        duration: 0,
-        curve: 'easeOut'
-      });
+      // this.individualModifiers[elementNumber].setTransform(
+      //   Transform.translate(0, 0, currentIndividualZ), {
+      //   duration: 0,
+      //   curve:'easeOut'
+      // });
+      // this.translateModifiers[elementNumber].modifier.setTransform(
+      //   Transform.multiply(Transform.translate(currentTransX, currentTransY, 0), Transform.multiply(Transform.rotateX(-currentPlaneRotation[0]), Transform.rotateY(-currentPlaneRotation[1]))), {
+      //   duration: 0,
+      //   curve: 'easeOut'
+      // });
 
 
       this.planeModifiers[elementNumber].setTransform(
