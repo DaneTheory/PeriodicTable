@@ -34,7 +34,7 @@ define(function(require, exports, module) {
 
 
         this.inViewElements = [];
-        this.isFliped = false;
+        this.isFliped = [];
 
 
         var mainEngine = Engine.createContext();
@@ -212,8 +212,13 @@ define(function(require, exports, module) {
 
                   var elementBackSurface = new Surface({
                     size: [50,50],
+                    content: context.options.elementData[elementNumber].name,
                     properties: {
-                      backgroundColor: elementColors[context.options.elementData[elementNumber].type]
+                      textAlign: 'center',
+                      backgroundColor: elementColors[context.options.elementData[elementNumber].type],
+                      color: 'white',
+                      fontSize: 8 + 'px',
+                      overflow: 'hidden'
                     }
                   });
                   var individualBackRotation = new Modifier({
@@ -236,7 +241,7 @@ define(function(require, exports, module) {
                   modifierBackChain.addModifier(tableBackConnection);
 
                   tableBackConnection.transformFrom(function() {
-                      return Transform.multiply(Transform.translate(0,0,-context.zTransitionable.get()), Transform.multiply(Transform.rotateY(context.yTransitionable.get()), Transform.rotateX(context.xTransitionable.get())))
+                      return Transform.multiply(Transform.translate(0,0,context.zTransitionable.get()), Transform.multiply(Transform.rotateY(context.yTransitionable.get()), Transform.rotateX(context.xTransitionable.get())))
                   });
 
                   flatBackConnection.transformFrom(function() {
@@ -319,6 +324,13 @@ define(function(require, exports, module) {
 
           sync.removeListener('end', inTable);
           sync.on('end', inView);
+        } else if (velocity[0] > 0.1 && velocity[0] < 1 || velocity[0] > -1 && velocity[0] < -0.1) {
+
+          if (context.isFliped.indexOf(i) > -1) {
+            reFlipElement(velocity);
+          } else {
+            flipElement(velocity);
+          }
         }
       }
 
@@ -339,6 +351,13 @@ define(function(require, exports, module) {
 
           sync.removeListener('end', inHolding);
           sync.on('end', inView);
+        } else if (velocity[0] > 0.1 && velocity[0] < 1 || velocity[0] > -1 && velocity[0] < -0.1) {
+
+          if (context.isFliped.indexOf(i) > -1) {
+            reFlipElement(velocity);
+          } else {
+            flipElement(velocity);
+          }
         }
       }
 
@@ -374,13 +393,12 @@ define(function(require, exports, module) {
           sync.removeListener('end', inView);
           sync.on('end', inTable);
         } else if (velocity[0] > 0.1 && velocity[0] < 1 || velocity[0] > -1 && velocity[0] < -0.1) {
-          console.log('flip element');
-          if (context.isFliped) {
+
+          if (context.isFliped.indexOf(i) > -1) {
             reFlipElement(velocity);
           } else {
             flipElement(velocity);
           }
-
         }
       }
 
@@ -414,7 +432,7 @@ define(function(require, exports, module) {
         individualYTransitionable.set(flipDirection, transition);
         individualYBackTransitionable.set(0, transition);
 
-        context.isFliped = true;
+        context.isFliped.push(i);
       }
 
       function reFlipElement(velocity) {
@@ -442,7 +460,11 @@ define(function(require, exports, module) {
         individualYTransitionable.set(0, transition);
         individualYBackTransitionable.set(flipDirection, transition);
 
-        context.isFliped = false;
+        for (var int = context.isFliped.length - 1; int >= 0; int--) {
+          if(context.isFliped[int] === i) {
+            context.isFliped.splice(int, 1);
+          }
+        }
       }
 
 
@@ -465,7 +487,7 @@ define(function(require, exports, module) {
 
 
         context.elementElements[i].flatBack.transformFrom(function() {
-          return Transform.multiply(Transform.translate(0,0,-flatZTransitionable.get()), Transform.multiply(Transform.rotateY(flatYTransitionable.get()), Transform.rotateX(flatXTransitionable.get())))
+          return Transform.multiply(Transform.translate(0,0,flatZTransitionable.get()), Transform.multiply(Transform.rotateY(flatYTransitionable.get()), Transform.rotateX(flatXTransitionable.get())))
         });
 
 
@@ -488,7 +510,7 @@ define(function(require, exports, module) {
         });
 
         context.elementElements[i].flatBack.transformFrom(function() {
-          return Transform.multiply(Transform.translate(0,0,-tableZTransitionable.get()), Transform.multiply(Transform.rotateY(tableYTransitionable.get()), Transform.rotateX(tableXTransitionable.get())))
+          return Transform.multiply(Transform.translate(0,0,tableZTransitionable.get()), Transform.multiply(Transform.rotateY(tableYTransitionable.get()), Transform.rotateX(tableXTransitionable.get())))
         });
 
         tableYTransitionable.set(context.yTransitionable.get(), context.options.transition);
