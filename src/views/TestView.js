@@ -30,8 +30,11 @@ define(function(require, exports, module) {
         this.tableHeight = this.elementSize * 10.4;
         this.windowHeight = window.innerHeight;
         this.windowWidth = window.innerWidth;
-        console.log(this.windowWidth);
+        console.log(this.windowWidth +', ' + this.windowHeight);
 
+
+        this.inViewElements = [];
+        this.isFliped = false;
 
 
         var mainEngine = Engine.createContext();
@@ -166,7 +169,7 @@ define(function(require, exports, module) {
         } else {
           //ADD ELEMENT
           elementNumber = elementNumber ++;
-
+            //*****************ADD ELEMENT FACE*************************//
                   var elementSurface = new Surface({
                     size: [50,50],
                     content: context.options.elementData[elementNumber].abreviation,
@@ -179,24 +182,21 @@ define(function(require, exports, module) {
                       color: 'white'
                     }
                   });
-
+                  var individualRotation = new Modifier();
                   var originalTranslate = Transform.translate((-context.tableWidth/2)+(distance * rowNumber), (-context.tableHeight/2)+(distance*columnNumber),0);
-
                   var positionModifier = new Modifier({
                     align: [0.5,0.5],
                     transform: originalTranslate
                   });
-
                   var tableConnection = new Modifier({
                     origin: [0.5,0.5],
                   });
-
                   var flatConnection = new Modifier({
                     origin: [0.5,0.5]
                   });
 
-
                   var modifierChain = new ModifierChain();
+                  modifierChain.addModifier(individualRotation);
                   modifierChain.addModifier(positionModifier);
                   modifierChain.addModifier(tableConnection);
 
@@ -208,11 +208,70 @@ define(function(require, exports, module) {
                       return Transform.multiply(Transform.translate(0,0,context.zTransitionable.get()), Transform.multiply(Transform.rotateY(context.yTransitionable.get()), Transform.rotateX(context.xTransitionable.get())))
                   });
 
-                  context.elementElements.push({surface: elementSurface, original: originalTranslate, modifierChain: modifierChain, position: positionModifier, table: tableConnection, flat: flatConnection});
-                  console.log(elementNumber);
+            //****************ADD ELEMENT BACK*********************************//
+
+                  var elementBackSurface = new Surface({
+                    size: [50,50],
+                    properties: {
+                      backgroundColor: elementColors[context.options.elementData[elementNumber].type]
+                    }
+                  });
+                  var individualBackRotation = new Modifier({
+                    transform: Transform.rotateY(Math.PI)
+                  });
+                  var positionBackModifier = new Modifier({
+                      align: [0.5,0.5],
+                      transform: originalTranslate
+                  });
+                  var tableBackConnection = new Modifier({
+                    origin: [0.5,0.5]
+                  });
+                  var flatBackConnection = new Modifier({
+                    origin: [0.5,0.5]
+                  });
+
+                  var modifierBackChain = new ModifierChain();
+                  modifierBackChain.addModifier(individualBackRotation);
+                  modifierBackChain.addModifier(positionBackModifier);
+                  modifierBackChain.addModifier(tableBackConnection);
+
+                  tableBackConnection.transformFrom(function() {
+                      return Transform.multiply(Transform.translate(0,0,-context.zTransitionable.get()), Transform.multiply(Transform.rotateY(context.yTransitionable.get()), Transform.rotateX(context.xTransitionable.get())))
+                  });
+
+                  flatBackConnection.transformFrom(function() {
+                      return Transform.multiply(Transform.translate(0,0,context.zTransitionable.get()), Transform.multiply(Transform.rotateY(context.yTransitionable.get()), Transform.rotateX(context.xTransitionable.get())))
+                  });
+
+
+
+
+
+
+
+
+
+
+
+                  context.elementElements.push({surface:        elementSurface,
+                                                original:       originalTranslate,
+                                                modifierChain:  modifierChain,
+                                                position:       positionModifier,
+                                                table:          tableConnection,
+                                                flat:           flatConnection,
+                                                individual:     individualRotation,
+                                                backSurface:    elementBackSurface,
+                                                modifierBackChain: modifierBackChain,
+                                                individualBack: individualBackRotation,
+                                                positionBack:   positionBackModifier,
+                                                tableBack:      tableBackConnection,
+                                                flatBack:       flatBackConnection});
+
+
                   setElementSurfaceListener(context, elementNumber);
 
                   table.add(modifierChain).add(elementSurface);
+                  table.add(modifierBackChain).add(elementBackSurface);
 
                   elementNumber++
 
@@ -227,8 +286,7 @@ define(function(require, exports, module) {
 
 
     function setElementSurfaceListener(context, i) {
-      //console.log(i);
-      //console.log(context.elementElements[i]);
+
 
       //////////////////////////////////////////////////////////////////////////////////////FLING LISTENERS:::::
 
@@ -236,6 +294,7 @@ define(function(require, exports, module) {
       var sync = new GenericSync(['mouse', 'touch']);
 
       context.elementElements[i].surface.pipe(sync);
+      context.elementElements[i].backSurface.pipe(sync);
       sync.pipe(accumulator);
 
 
@@ -250,8 +309,13 @@ define(function(require, exports, module) {
           sync.on('end', inHolding);
 
         } else if (velocity[0] < 0.1 && velocity [0] > -0.1) {
+
+          context.inViewElements.push(i);
           detachElement();
           enlargeElement();
+
+
+
 
           sync.removeListener('end', inTable);
           sync.on('end', inView);
@@ -269,6 +333,8 @@ define(function(require, exports, module) {
           sync.on('end', inTable);
 
         } else if (velocity[0] < 0.1 && velocity [0] > -0.1) {
+
+          context.inViewElements.push(i);
           enlargeElement();
 
           sync.removeListener('end', inHolding);
@@ -278,24 +344,108 @@ define(function(require, exports, module) {
 
       var inView = function(data) {
         var velocity = data.velocity;
+        console.log(velocity);
         if (velocity[0] > 1) {
 
+          for (var int = context.inViewElements.length - 1; int >= 0; int--) {
+            if(context.inViewElements[int] === i) {
+              context.inViewElements.splice(int, 1);
+            }
+          }
           translateRight(velocity);
 
           sync.removeListener('end', inView);
           sync.on('end', inHolding);
 
+
+
+
         }  else if (velocity[0] < 0.1 && velocity [0] > -0.1 || velocity[1] < -1) {
+          for (var int = context.inViewElements.length - 1; int >= 0; int--) {
+            if(context.inViewElements[int] === i) {
+              context.inViewElements.splice(int, 1);
+            }
+          }
+
+
           attachElement();
           unenlargeElement();
 
           sync.removeListener('end', inView);
           sync.on('end', inTable);
+        } else if (velocity[0] > 0.1 && velocity[0] < 1 || velocity[0] > -1 && velocity[0] < -0.1) {
+          console.log('flip element');
+          if (context.isFliped) {
+            reFlipElement(velocity);
+          } else {
+            flipElement(velocity);
+          }
+
         }
       }
 
 
       sync.on('end', inTable);
+
+      function flipElement(velocity) {
+
+        var individualYTransitionable = new Transitionable(0);
+        var individualYBackTransitionable = new Transitionable(-Math.PI);
+        var flipDirection = Math.PI;
+        if (velocity[0] < 0) {
+          flipDirection = -Math.PI;
+          individualYBackTransitionable.set(Math.PI);
+        }
+
+        context.elementElements[i].individual.transformFrom(function() {
+          return Transform.rotateY(individualYTransitionable.get())
+        });
+
+        context.elementElements[i].individualBack.transformFrom(function() {
+          return Transform.rotateY(individualYBackTransitionable.get())
+        });
+
+        var transition = {
+          method: 'tween',
+          duration: 800,
+          curve: 'easeOut'
+        };
+
+        individualYTransitionable.set(flipDirection, transition);
+        individualYBackTransitionable.set(0, transition);
+
+        context.isFliped = true;
+      }
+
+      function reFlipElement(velocity) {
+        var individualYTransitionable = new Transitionable(Math.PI);
+        var individualYBackTransitionable = new Transitionable(0);
+        flipDirection = -Math.PI;
+        if(velocity[0] > 0) {
+          flipDirection = Math.PI;
+          individualYTransitionable.set(-Math.PI);
+        }
+        context.elementElements[i].individual.transformFrom(function() {
+          return Transform.rotateY(individualYTransitionable.get())
+        });
+
+        context.elementElements[i].individualBack.transformFrom(function() {
+          return Transform.rotateY(individualYBackTransitionable.get())
+        });
+
+        var transition = {
+          method: 'tween',
+          duration: 800,
+          curve: 'easeOut'
+        };
+
+        individualYTransitionable.set(0, transition);
+        individualYBackTransitionable.set(flipDirection, transition);
+
+        context.isFliped = false;
+      }
+
+
 
 
       function detachElement() {
@@ -306,12 +456,25 @@ define(function(require, exports, module) {
         context.elementElements[i].modifierChain.removeModifier(context.elementElements[i].table);
         context.elementElements[i].modifierChain.addModifier(context.elementElements[i].flat);
 
+        context.elementElements[i].modifierBackChain.removeModifier(context.elementElements[i].tableBack);
+        context.elementElements[i].modifierBackChain.addModifier(context.elementElements[i].flatBack);
+
         context.elementElements[i].flat.transformFrom(function() {
           return Transform.multiply(Transform.translate(0,0,flatZTransitionable.get()), Transform.multiply(Transform.rotateY(flatYTransitionable.get()), Transform.rotateX(flatXTransitionable.get())))
         });
+
+
+        context.elementElements[i].flatBack.transformFrom(function() {
+          return Transform.multiply(Transform.translate(0,0,-flatZTransitionable.get()), Transform.multiply(Transform.rotateY(flatYTransitionable.get()), Transform.rotateX(flatXTransitionable.get())))
+        });
+
+
         flatYTransitionable.set(0, context.options.transition);
         flatXTransitionable.set(0, context.options.transition);
         flatZTransitionable.set(0, context.options.transition);
+
+
+
 
       }
 
@@ -322,8 +485,12 @@ define(function(require, exports, module) {
 
         context.elementElements[i].flat.transformFrom(function() {
           return Transform.multiply(Transform.translate(0,0,tableZTransitionable.get()), Transform.multiply(Transform.rotateY(tableYTransitionable.get()), Transform.rotateX(tableXTransitionable.get())))
-
         });
+
+        context.elementElements[i].flatBack.transformFrom(function() {
+          return Transform.multiply(Transform.translate(0,0,-tableZTransitionable.get()), Transform.multiply(Transform.rotateY(tableYTransitionable.get()), Transform.rotateX(tableXTransitionable.get())))
+        });
+
         tableYTransitionable.set(context.yTransitionable.get(), context.options.transition);
         tableXTransitionable.set(context.xTransitionable.get(), context.options.transition);
         tableZTransitionable.set(context.zTransitionable.get(), context.options.transition);
@@ -333,10 +500,16 @@ define(function(require, exports, module) {
         Timer.setTimeout(function() {
           context.elementElements[i].modifierChain.addModifier(context.elementElements[i].table);
           context.elementElements[i].modifierChain.removeModifier(context.elementElements[i].flat);
+
+          context.elementElements[i].modifierBackChain.addModifier(context.elementElements[i].tableBack);
+          context.elementElements[i].modifierBackChain.removeModifier(context.elementElements[i].flatBack);
         }.bind(this), 1500);
       }
 
       function translateRight(velocity) {
+        enlargeElement();
+
+
         relocatedX = context.windowWidth / 2.778;
         relocatedY = (velocity[1] * 100);
         relocatedZ = 200;
@@ -348,6 +521,11 @@ define(function(require, exports, module) {
           duration: 1500,
           curve: 'easeOut'
         });
+
+        context.elementElements[i].positionBack.setTransform(Transform.translate(relocatedX,relocatedY,relocatedZ), {
+          duration: 1500,
+          curve: 'easeOut'
+        });
       }
 
       function translateIntoTable(velocity) {
@@ -356,17 +534,39 @@ define(function(require, exports, module) {
           duration: 1500,
           curve: 'easeOut'
         });
-      }
-
-      function enlargeElement() {
-        context.elementElements[i].position.setTransform(Transform.translate(0,0,600), {
+        context.elementElements[i].positionBack.setTransform(context.elementElements[i].original, {
           duration: 1500,
           curve: 'easeOut'
         });
       }
 
+      function enlargeElement() {
+
+        for (var integer = 0;integer < context.inViewElements.length;integer++) {
+
+            var x = (-27.5 * (context.inViewElements.length - 1)) + (55 * integer);
+
+            console.log(context.inViewElements.length + ', ' + integer + ', '+ x);
+
+            context.elementElements[context.inViewElements[integer]].position.setTransform(Transform.translate(x,0,800), {
+              duration: 1500,
+              curve: 'easeOut'
+            });
+            context.elementElements[context.inViewElements[integer]].positionBack.setTransform(Transform.translate(x,0,800), {
+              duration: 1500,
+              curve: 'easeOut'
+            });
+        }
+      }
+
       function unenlargeElement() {
+        enlargeElement();
         context.elementElements[i].position.setTransform(context.elementElements[i].original, {
+          duration: 1500,
+          curve: 'easeOut'
+        });
+        enlargeElement();
+        context.elementElements[i].positionBack.setTransform(context.elementElements[i].original, {
           duration: 1500,
           curve: 'easeOut'
         });
