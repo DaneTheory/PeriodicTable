@@ -1,11 +1,11 @@
 define(function(require, exports, module) {
     module.exports = [
-        {abreviation: 'H', name: 'Hydrogen', number: '1', atomicWeight: '1.00794', type: 'hydrogen'},
-        {abreviation: 'Li', name: 'Lithium', number: '3', atomicWeight: '6.941', type: 'alkaliMetal'},
-        {abreviation: 'Na', name: 'Sodium', number: '11', atomicWeight: '22.98976928', type: 'alkaliMetal'},
-        {abreviation: 'K', name: 'Potassium', number: '19', atomicWeight: '39.0983', type: 'alkaliMetal'},
-        {abreviation: 'Rb', name: 'Rubidium', number: '37', atomicWeight: '85.4678', type: 'alkaliMetal'},
-        {abreviation: 'Cs', name: 'Caesium', number: '55', atomicWeight: '132.9054519', type: 'alkaliMetal'},
+        {abreviation: 'H', name: 'Hydrogen', number: '1', atomicWeight: '1.00794', type: 'hydrogen', icon: 'img/elements/hydrogen.svg'},
+        {abreviation: 'Li', name: 'Lithium', number: '3', atomicWeight: '6.941', type: 'alkaliMetal', icon: 'img/elements/lithium.png'},
+        {abreviation: 'Na', name: 'Sodium', number: '11', atomicWeight: '22.98976928', type: 'alkaliMetal', icon: 'img/elements/sodium.png'},
+        {abreviation: 'K', name: 'Potassium', number: '19', atomicWeight: '39.0983', type: 'alkaliMetal', icon: 'img/elements/potassium.png'},
+        {abreviation: 'Rb', name: 'Rubidium', number: '37', atomicWeight: '85.4678', type: 'alkaliMetal', icon: 'img/elements/rubidium.svg'},
+        {abreviation: 'Cs', name: 'Caesium', number: '55', atomicWeight: '132.9054519', type: 'alkaliMetal', icon: 'img/elements/caesium.svg'},
         {abreviation: 'Fr', name: 'Francium', number: '87', atomicWeight: '223', type: 'alkaliMetal'},
         {abreviation: 'Be', name: 'Beryllium', number: '4', atomicWeight: '9.012182', type: 'alkaliEarthMetal'},
         {abreviation: 'Mg', name: 'Magnesium', number: '12', atomicWeight: '24.3050', type: 'alkaliEarthMetal'},
