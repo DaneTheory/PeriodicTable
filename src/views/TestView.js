@@ -585,6 +585,8 @@ define(function(require, exports, module) {
         var flatX = new Transitionable(0);
         var flatY = new Transitionable(0);
 
+
+
         var originalX = context.elementElements[i].original[12];
 
         context.elementElements[i].modifierChain.removeModifier(context.elementElements[i].table);
@@ -610,6 +612,7 @@ define(function(require, exports, module) {
           duration: duration,
           curve: 'easeOut'
         };
+
 
         flatYTransitionable.set(0, transition);
         flatXTransitionable.set(0, transition);
@@ -790,10 +793,10 @@ define(function(require, exports, module) {
           var inViewY = context.elementElements[elementNumber].original[13];
 
           //console.log(elementNumber + ': ' + context.elementElements[elementNumber].flat.getTransform() + ' inViewX&Y: ' + inViewX + ', ' + inViewY);
-          var halfElement = -context.elementWidth +context.elementWidth *.03;
+          var halfElement = -context.elementWidth / 2 - context.elementWidth *.03;
           var x = (halfElement * (context.inViewElements.length - 1)) + (-halfElement * 2 * int);
           var newX = inViewX + x;
-          console.log(newX);
+          console.log(halfElement + ', ' + newX);
 
 
 
