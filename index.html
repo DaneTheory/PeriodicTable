@@ -13,6 +13,7 @@
         <script type="text/javascript" src="http://code.famo.us/lib/functionPrototypeBind.js"></script>
         <script type="text/javascript" src="http://code.famo.us/lib/classList.js"></script>
         <script type="text/javascript" src="http://code.famo.us/lib/requestAnimationFrame.js"></script>
+        <!-- // <script type="text/javascript" src="http://d3js.org/d3.v3.min.js"></script> -->
 
         <!-- module loader -->
         <script type="text/javascript" src="http://code.famo.us/lib/require.js"></script>
@@ -27,12 +28,17 @@
 
         <!-- app code -->
         <link rel="stylesheet" type="text/css" href="css/app.css" />
-        <script type="text/javascript">
-            require.config({
-                baseUrl: './src/'
-            });
-            require(['main']);
+        // <script type="text/javascript">
+             require.config({
+                 baseUrl: './src/',
+                 paths: {
+                   "d3": "http://d3js.org/d3.v3.min.js"
+                 }
+             });
+             require(['main']);
         </script>
+
+        <!-- // <script src="./src/require.js" data-main="./src/requireConfig.js"></script> -->
 
     </head>
     <body></body>

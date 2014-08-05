@@ -26,3 +26,9 @@ body {
   box-shadow: 0 0 30px #82ffd7;
   background-color: rgba(131, 255, 212, 0.1);
 }
+
+.hqPeriodicElement {
+  border: 4px solid #82ffd7;
+  box-shadow: 0 0 30px #82ffd7;
+  background-color: rgba(131, 255, 212, 0.1);
+}

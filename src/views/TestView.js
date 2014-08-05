@@ -18,6 +18,7 @@ define(function(require, exports, module) {
     var TweenTransition = require('famous/transitions/TweenTransition');
     var RenderNode    = require('famous/core/RenderNode');
     var Easing          = require('famous/transitions/Easing');
+    var d3              = require('http://d3js.org/d3.v3.min.js');
 
 
 
@@ -94,6 +95,7 @@ define(function(require, exports, module) {
         _setPlaneListener.call(this);
         _setPageButtons.call(this);
         mainEngine.add(_createElements.call(this));
+        addSVG.call(this);
 
         this.add(mainEngine);
 
@@ -111,6 +113,35 @@ define(function(require, exports, module) {
         duration: 1500
         }
     };
+
+
+    function addSVG() {
+
+            var lanthanum = [2,	8, 18, 18,	9, 2];
+
+            var heighMulti = 10;
+
+            var svgSkew = d3.select("body").append("svg").attr("width", this.elementWidth).attr("height", this.elementHeight);
+            svgSkew.selectAll("rect").data(lanthanum).enter().append("rect")
+              .attr("x", function(d,i) {
+                return 200 + i * 30 + 150;
+              }).attr("y", function(d, i) {
+                return -300 - (i * 10);
+              }).attr("width", 20)
+              .attr("height", function(d) {
+                return 0;
+              })
+              .attr("fill", function(d) {
+                return "rgb(0,"+(d*20)+","+(d*10)+")";
+              })
+              .attr("transform", "rotate(90 0 0) skewX(45)")
+            .transition()
+              .duration(1000)
+              .ease(Math.sqrt)
+              .attr("height", function(d) {
+                return d * heighMulti;
+              });
+        }
 
 
     function _createElements() {
@@ -225,13 +256,25 @@ define(function(require, exports, module) {
 
             //****************ADD ELEMENT BACK*********************************//
 
+
+
+                  // var contentTemplate = function() {
+                  //   return "<div>" + context.options.elementData[elementNumber].number + "</div>" +
+                  //          "<div>" + context.options.elementData[elementNumber].name + "</div>" +
+                  //          "<div>" + context.options.elementData[elementNumber].atomicWeight + "</div>" +
+                  //          "<div>" + context.options.elementData[elementNumber].type + "</div>" +
+                  //          "<div><img src=\'" + context.options.elementData[elementNumber].icon + "\' alt=\'element diagram\' height=\'75\'></div>";
+                  // };
+
                   var contentTemplate = function() {
-                    return "<div>" + context.options.elementData[elementNumber].number + "</div>" +
-                           "<div>" + context.options.elementData[elementNumber].name + "</div>" +
-                           "<div>" + context.options.elementData[elementNumber].atomicWeight + "</div>" +
-                           "<div>" + context.options.elementData[elementNumber].type + "</div>" +
-                           "<div><img src=\'" + context.options.elementData[elementNumber].icon + "\' alt=\'element diagram\' height=\'75\'></div>";
-                  };
+                    return  "<div>" + context.options.elementData[elementNumber].number + "</div>" +
+                            "<div>" + context.options.elementData[elementNumber].name + "</div>" +
+                            "<div>" + context.options.elementData[elementNumber].atomicWeight + "</div>" +
+                            "<div>" + context.options.elementData[elementNumber].type + "</div>" +
+                            "<div class=\'" + "element" + elementNumber + "\'></div>";
+                  }
+
+
 
                   var elementBackSurface = new Surface({
                     size: [context.elementWidth,context.elementHeight],
@@ -450,6 +493,8 @@ define(function(require, exports, module) {
         individualYTransitionable.set(flipDirection, transition);
         individualYBackTransitionable.set(0, transition);
 
+        addSvg();
+
         context.isFliped.push(i);
       }
 
@@ -485,7 +530,40 @@ define(function(require, exports, module) {
         }
       }
 
+      function addSvg() {
+        var lanthanum = [2,	8, 18, 18,	9, 2];
+        var heighMulti = 3;
+        var dividerHeight = 6;
 
+
+        var width = 110;
+        var height = width * 1.25;
+
+        var element = '.element' + i;
+
+        var svg = d3.select(element).append("svg").attr("width", width).attr("height", height);
+        var newSVG = svg.selectAll("rect").data(lanthanum).enter().append("rect")
+          .attr("x", function(d,i) {
+          return (width*0.65) + i * dividerHeight;
+        }).attr("y", function(d, i) {
+          return -width/2 + (-d*heighMulti/2);
+        }).attr("width", 5)
+        .attr("height", function(d) {
+          return 0;
+        })
+        .attr("fill", function(d) {
+          return "rgb(0,"+(d*20)+","+(d*10)+")";
+        })
+        .attr("transform", "rotate(90 0 0) skewX(45)")
+      .transition()
+        .duration(2000)
+        .ease(Math.sqrt)
+        .attr("height", function(d) {
+          return d * heighMulti;
+        });
+
+
+      }
 
 
       function detachElement(velocity) {
@@ -733,6 +811,11 @@ define(function(require, exports, module) {
           flatX.set(-originalX, transition);
           flatY.set(-originalY, transition);
 
+          Timer.setTimeout(function() {
+            //addHQElement();
+
+          }.bind(this), 1500);
+
         scoochElements();
       }
 
@@ -775,6 +858,35 @@ define(function(require, exports, module) {
         flatY.set(-originalY, transition);
 
         scoochElements();
+      }
+
+      function addHQElement() {
+        var hqWidth = context.elementWidth*3.3;
+        var hqHeight = hqWidth * 1.25;
+
+        var hqSurface = new Surface({
+          size: [hqWidth,hqHeight],
+          content: 'H',
+          properties: {
+            lineHeight: hqHeight + 'px',
+            textAlign: 'center',
+            fontSize: hqWidth / 3 + 'px',
+            overflow: 'hidden',
+            color: 'white',
+            fontFamily: 'Roboto, sans-serif',
+            fontWeight: 100
+          }
+        });
+
+        hqSurface.addClass('hqPeriodicElement');
+
+        var hqModifier = new Modifier({
+          origin: [0.5,0.5],
+          align: [0.5,0.5],
+          transform: Transform.translate(0,0,1000)
+        });
+
+        context.add(hqModifier).add(hqSurface);
       }
 
       function scoochElements() {

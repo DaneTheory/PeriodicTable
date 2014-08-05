@@ -14,6 +14,7 @@ define(function(require, exports, module) {
 	var PeriodicTable = require('views/PeriodicTable');
 	var ElementData = require('data/ElementData');
 	var TestView 		= require('views/TestView');
+	var d3Integration	= require('views/d3Integration');
 
 
 
@@ -35,6 +36,8 @@ define(function(require, exports, module) {
 		elementData: ElementData
 	});
 
+
+		// var d3int = new d3Integration();
 
 
 	//mainContext.add(backgroundView);
