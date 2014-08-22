@@ -10,23 +10,28 @@ define(function(require, exports, module) {
 	var GridView = require('views/GridView');
 	var FlyView = require('views/FlyView');
 	var QuaternionBox = require('views/QuaternionBox');
-	var BackgroundView = require('views/BackgroundView');
 	var PeriodicTable = require('views/PeriodicTable');
 	var ElementData = require('data/ElementData');
 	var TestView 		= require('views/TestView');
-	var d3Integration	= require('views/d3Integration');
 
 
 
 
 	var mainContext = Engine.createContext();
-	//mainContext.setPerspective(1000);
 
+//*************************
 
+	// comment in and out the various view and add them to mainContext.
+	// Each is different.
+	// quaternion box was a learning process about 3d animations
+	// periodictable was the first table and has the most features
+	// testview is the second periodic table that was redone to be able to take elements out of
+	// the tables plane so you could individually look at elements without them following the rotation and movement
+	// of the elements still in the table
 
-	//var backgroundView = new BackgroundView();
+//*******************************
 
-	//var quaternionBox = new QuaternionBox();
+	// var quaternionBox = new QuaternionBox();
 
 	// var periodicTable = new PeriodicTable({
 	// 	elementData: ElementData
@@ -36,11 +41,6 @@ define(function(require, exports, module) {
 		elementData: ElementData
 	});
 
-
-		// var d3int = new d3Integration();
-
-
-	//mainContext.add(backgroundView);
 
 
 

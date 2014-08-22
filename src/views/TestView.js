@@ -95,7 +95,6 @@ define(function(require, exports, module) {
         _setPlaneListener.call(this);
         _setPageButtons.call(this);
         mainEngine.add(_createElements.call(this));
-        addSVG.call(this);
 
         this.add(mainEngine);
 
@@ -114,34 +113,6 @@ define(function(require, exports, module) {
         }
     };
 
-
-    function addSVG() {
-
-            var lanthanum = [2,	8, 18, 18,	9, 2];
-
-            var heighMulti = 10;
-
-            var svgSkew = d3.select("body").append("svg").attr("width", this.elementWidth).attr("height", this.elementHeight);
-            svgSkew.selectAll("rect").data(lanthanum).enter().append("rect")
-              .attr("x", function(d,i) {
-                return 200 + i * 30 + 150;
-              }).attr("y", function(d, i) {
-                return -300 - (i * 10);
-              }).attr("width", 20)
-              .attr("height", function(d) {
-                return 0;
-              })
-              .attr("fill", function(d) {
-                return "rgb(0,"+(d*20)+","+(d*10)+")";
-              })
-              .attr("transform", "rotate(90 0 0) skewX(45)")
-            .transition()
-              .duration(1000)
-              .ease(Math.sqrt)
-              .attr("height", function(d) {
-                return d * heighMulti;
-              });
-        }
 
 
     function _createElements() {
