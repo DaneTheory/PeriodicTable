@@ -1,0 +1,15 @@
+{
+  "name": "periodictable",
+  "version": "1.0.0",
+  "main": "index.html",
+  "repository": "https://github.com/hunterstich/PeriodicTable.git",
+  "author": "Branden Dane <DaneTheory@gmail.com>",
+  "license": "MIT",
+  "scripts": {
+    "start": "http-server"
+  },
+  "dependencies": {
+    "esm": "^3.2.25",
+    "http-server": "^0.12.1"
+  }
+}
